@@ -1,0 +1,270 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>getFlowKeyHash</b> - YAF Flow Key Calculator</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<pre><code>    getFlowKeyHash [--in INPUT_SPECIFIER]
+                   [--out OUTPUT_SPECIFIER]
+                   [--sip4 IPV4_ADDRESS] [--dip4 IPV4_ADDRESS]
+                   [--sip6 IPV6_ADDRESS] [--dip6 IPV6_ADDRESS]
+                   [--sport SOURCE_PORT] [--dport DESTINATION_PORT]
+                   [--protocol PROTOCOL] [--vlan VLAN_ID]
+                   [--date FLOW_START_DATE] [--time FLOW_START_TIME]
+                   [--ipfix][--reverse][--snmp]</code></pre>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>getFlowKeyHash</b> takes information about a flow and calculates the <b>yaf</b> flow key hash and prints the flow records along with the hash to the screen or to the output specifier in a textual, bar (|) delimited format. Together, the flow key hash and the start time of the flow will create a unique identifier for a flow. The flow key hash and start time are used to identify flows with <b>yaf</b>&#39;s pcap export options. If given the start time, <b>getFlowKeyHash</b> will print the file path to the flow&#39;s pcap (helpful if <b>yaf</b> was run with the --pcap-per-flow option) and the milliseconds since epoch time (helpful for use with <b>yaf</b>&#39;s pcap-meta-file).</p>
+
+<p><b>getFlowKeyHash</b> reads IPFIX from the file provided to --in or from standard input when no file names are specified and --sip[4|6] and --dip[4|6] are not available.</p>
+
+<p><b>getFlowKeyHash</b> will export the flow key hash and start time in IPFIX if <i>--ipfix</i> is provided.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<h2 id="Input-Options">Input Options</h2>
+
+<p>Either --in or the remaining options are required for <b>getFlowKeyHash</b> to calculate the flow key.</p>
+
+<dl>
+
+<dt id="in-INPUT_SPECIFIER"><b>--in</b> <i>INPUT_SPECIFIER</i></dt>
+<dd>
+
+<p><i>INPUT_SPECIFIER</i> is an input specifier. The default is to read from standard input. Otherwise, it is a filename. The string <b>-</b> may be used to read from standard input. The input should be IPFIX. The internal template contains the following fields:</p>
+
+<ul>
+
+<li><p>flowStartMilliseconds</p>
+
+</li>
+<li><p>sourceIPv4Address, sourceIPv6Address</p>
+
+</li>
+<li><p>destinationIPv4Address, destinationIPv6Address</p>
+
+</li>
+<li><p>sourceTransportPort</p>
+
+</li>
+<li><p>destinationTransportPort</p>
+
+</li>
+<li><p>ingressInterface</p>
+
+</li>
+<li><p>vlanId</p>
+
+</li>
+<li><p>protocolIdentifier</p>
+
+</li>
+</ul>
+
+<p>The ingressInterface is included because <b>rwsilk2ipfix</b> exports the vlanId in this field. The ingressInterface field is only used if it is populated and vlanId is not. If both fields contain non-zero values, vlanId is used to calculate the flow key hash, and ingressInterface is ignored.</p>
+
+</dd>
+<dt id="sip4-IPV4_ADDRESS"><b>--sip4</b> <i>IPV4_ADDRESS</i></dt>
+<dd>
+
+<p><i>IPV4_ADDRESS</i> should be the source address of the flow in the form 127.0.0.1. Either --sip4 or --sip6 must be present if --in is not present.</p>
+
+</dd>
+<dt id="dip4-IPV4_ADDRESS"><b>--dip4</b> <i>IPV4_ADDRESS</i></dt>
+<dd>
+
+<p><i>IPV4_ADDRESS</i> should be the destination address of a flow in the form 127.0.0.1. Either --dip4 or --dip6 must be present if --in is not present.</p>
+
+</dd>
+<dt id="sip6-IPV6_ADDRESS"><b>--sip6</b> <i>IPV6_ADDRESS</i></dt>
+<dd>
+
+<p><i>IPV6_ADDRESS</i> should be the source IPv6 address of a flow in the form 2001:48af::1:1. Either --sip6 or --sip4 must be present if --in is not present.</p>
+
+</dd>
+<dt id="dip6-IPV6_ADDRESS"><b>--dip6</b> <i>IPV6_ADDRESS</i></dt>
+<dd>
+
+<p><i>IPV6_ADDRESS</i> should be the destination IPv6 address of a flow in the form 2001:48af::1:1. Either --dip6 or --dip4 must be present if --in is not present.</p>
+
+</dd>
+<dt id="sport-SOURCE_PORT"><b>--sport</b> <i>SOURCE_PORT</i></dt>
+<dd>
+
+<p><i>SOURCE_PORT</i> should be the source port of the flow. This number should be between 0 and 66535. The default value is 0.</p>
+
+</dd>
+<dt id="dport-DESTINATION_PORT"><b>--dport</b> <i>DESTINATION_PORT</i></dt>
+<dd>
+
+<p><i>DESTINATION_PORT</i> should be the destination port of the flow. This number should be between 0 and 65535. The default value is 0.</p>
+
+</dd>
+<dt id="protocol-PROTOCOL"><b>--protocol</b> <i>PROTOCOL</i></dt>
+<dd>
+
+<p><i>PROTOCOL</i> is the protocol of the flow. For TCP, <i>PROTOCOL</i> is 6. For UDP, <i>PROTOCOL</i> is 17. The default value is 0.</p>
+
+</dd>
+<dt id="vlan-VLAN"><b>--vlan</b> <i>VLAN</i></dt>
+<dd>
+
+<p><i>VLAN</i> is the vlan ID of the flow, if available. The default value is 0.</p>
+
+</dd>
+</dl>
+
+<h2 id="Output-Options">Output Options</h2>
+
+<p>This option controls where <b>getFlowKeyHash</b> will send its output. The default is to stdout.</p>
+
+<dl>
+
+<dt id="out-OUTPUT_SPECIFIER"><b>--out</b> <i>OUTPUT_SPECIFIER</i></dt>
+<dd>
+
+<p><i>OUTPUT_SPECIFIER</i> is an output specifier. The default is to write to stdout. Otherwise, a filename can be given. The string <b>-</b> may be used to write to stdout. The IPFIX export template contains the following fields:</p>
+
+<ul>
+
+<li><p>flowStartMilliseconds</p>
+
+</li>
+<li><p>flowEndMilliseconds</p>
+
+</li>
+<li><p>packetTotalCount</p>
+
+</li>
+<li><p>yafFlowKeyHash</p>
+
+</li>
+<li><p>reverseFlowKeyHash</p>
+
+</li>
+</ul>
+
+</dd>
+<dt id="ipfix"><b>--ipfix</b></dt>
+<dd>
+
+<p>If provided, <b>getFlowKeyHash</b> will export the flow key hash, start time, end time (if available), packet count (if available), and reverse flow key hash (if <b>--reverse</b> is present) in IPFIX to the <i>OUTPUT_SPECIFIER</i> provided to <i>--out</i> or stdout by default. This option is meant to be used when using with <b>yafMeta2Pcap</b>.</p>
+
+</dd>
+</dl>
+
+<h2 id="Optional-Arguments">Optional Arguments</h2>
+
+<p>The following options are optional and are only necessary to calculate the file path of the pcap for the flow. <b>yaf</b> uses the milliseconds of the flow&#39;s start time as the file directory. The date and time is also used in pcap file&#39;s name. If the date and time are given, <b>getFlowKeyHash</b> will also calculate the milliseconds since epoch, which is useful when using <b>yaf</b>&#39;s pcap-meta-files and the <b>yafMeta2Pcap</b> tool.</p>
+
+<dl>
+
+<dt id="date-FLOW_START_DATE"><b>--date</b> <i>FLOW_START_DATE</i></dt>
+<dd>
+
+<p>Specify the date in YYYY-MM-DD format; time is in UTC.</p>
+
+</dd>
+<dt id="time-FLOW_START_TIME"><b>--time</b> <i>FLOW_START_TIME</i></dt>
+<dd>
+
+<p>Specify the time in HH:MM:SS[.sss] format.</p>
+
+</dd>
+<dt id="reverse"><b>--reverse</b></dt>
+<dd>
+
+<p>Calculate the reverse flow key hash by swapping the source and destination IP addresses and ports. If this option is present and <b>--ipfix</b> is present, <b>getFlowKeyHash</b> will also export the reverse flow key hash in IPFIX.</p>
+
+</dd>
+<dt id="snmp"><b>--snmp</b></dt>
+<dd>
+
+<p>If present, <b>getFlowKeyHash</b> will ignore the value in ingressInterface field. SiLK encodes either the VLAN ID or the SNMP interface in the ingressInterface IPFIX field. If SiLK was configured to pack the SNMP interface, this value will interfere with the correct calculation of the <b>getFlowKeyHash</b>. You also may want to ignore this field if <b>yaf</b> is run with the <b>--no-vlan-in-key</b> option which forces <b>yaf</b> to not use the VLAN in the flow key hash calculation. Alternatively, you may set the environment variable YAF_IGNORE_SNMP to 1 to always ignore this value in flow key hash calculations.</p>
+
+</dd>
+</dl>
+
+<h1 id="Examples">Examples</h1>
+
+<p>In the following examples, the dollar sign (&quot;$&quot;) represents the shell prompt. The text after the dollar sign represents the command line. Lines have been wrapped for improved readability, and the back slash (&quot;\&quot;) is used to indicate a wrapped line.</p>
+
+<ul>
+
+<pre><code> $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+                  --dport 80 --protocol 6 --vlan 3
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash
+    10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735
+
+ $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+               --dport 80 --protocol 6 --vlan 3  --date 2011-03-21 \
+               --time 16:15:54.256
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+    10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735|       1300724154256
+
+ $ rwfilter --pass-destination=stdout --application=0 \
+            --start-date=2014/01/29:16:27 \
+            --type=all --max-pass-records=1
+            | rwsilk2ipfix | getFlowKeyHash
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+    10.20.11.51|    10.64.22.15|61902| 8080|  6|    0|4053426924|       1391012769175
+
+ $ yaf --in mypcap.pcap --out - | getFlowKeyHash
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+  127.0.224.172|        5.5.5.5| 1324|   80|  6|    0|2133427641|       1207802501882
+
+ $ rwfilter --pass-dest=stdout --application=53 \
+            --start-date=2014/01/29:16:27 \
+            --type=all --max-pass-records=2 \
+            | rwsilk2ipfix | getFlowKeyHash -I | \
+            yafMeta2Pcap --pcap-meta-file=&quot;/data/pcapmeta/*&quot; \
+            --out myDNSpcap.pcap</code></pre>
+
+</ul>
+
+<h1 id="Known-Issues">Known Issues</h1>
+
+<p>Bug reports may be sent directly to the Network Situational Awareness team at &lt;netsa-help@cert.org&gt;.</p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Emily Sarneso and the CERT Network Situational Awareness Group Engineering Team, &lt;http://www.cert.org/netsa&gt;.</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p>yaf(1)</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

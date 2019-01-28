@@ -1,0 +1,145 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>airdaemon</b> - Run a program as a daemon process, restarting it if it dies</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<pre><code>    airdaemon   [--retry RETRY_DELAY] [--retry-max RETRY_MAX_DELAY]
+                [--pidfile PID_FILE] [--airdaemon-pidfile PID_FILE] 
+                [--log LOG_SPECIFIER] [--loglevel LOG_LEVEL]
+                [--verbose] [--version] [--no-daemon]
+                -- PROGRAM [PROGRAM_ARGS]</code></pre>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>airdaemon</b> invokes a child process and ensures that it is restarted if it encounters any errors. The delay between child exit and restart can be chosen, and can either be constant or exponentially increasing up to a specified maximum.</p>
+
+<p>Use of two dashes (--) after all airdaemon command-line switches allows PROGRAM_ARGS to be interpreted by the PROGRAM rather than <b>airdaemon</b> itself. While they are not strictly required if you do not need to pass arguments to PROGRAM, they should be used for consistency.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<h2 id="Daemon-Options">Daemon Options</h2>
+
+<dl>
+
+<dt id="retry-RETRY_DELAY"><b>--retry</b>=<i>RETRY_DELAY</i></dt>
+<dd>
+
+<p>Wait RETRY_DELAY seconds after the child process exits abnormally until trying to restart the child process. See also <b>--retry-max</b></p>
+
+</dd>
+<dt id="retry-max-RETRY_MAX_DELAY"><b>--retry-max</b>=<i>RETRY_MAX_DELAY</i></dt>
+<dd>
+
+<p>This parameter, combined with the <b>--retry</b> parameter, facilitates truncated binary exponential backoff of the retry logic. The first retry attempt will be delayed by the value of the <b>--retry</b> parameter. If the child process exits abnormally within this time period, the delay is doubled. Once the child process survives longer than the value of the <b>--retry</b> parameter, the retry delay is reset to that value.</p>
+
+<p>For example, assume <b>--retry</b>=30 and <b>--retry-max</b>=240. The first time the child process exits abnormally, <b>airdaemon</b> will wait 30 seconds before invoking the child process again. If it exits abnormally again within 30 seconds, <b>airdaemon</b> will wait 60 seconds and try again. If the process dies again within 30 seconds, the delay doubles again to 120. The process continues until the delay hits the maximum of 240. Once the child process survives for 30 seconds, the delay will be reset to the original retry delay of 30.</p>
+
+</dd>
+<dt id="pidfile-PID_FILE"><b>--pidfile</b>=<i>PID_FILE</i></dt>
+<dd>
+
+<p>Write the process identifier of the child process to <i>PID_FILE</i>. Each time the child process is restarted, the process identifier in this file is updated. This option exists to facilitate the termination of the child process by shutdown scripts. Note that if the child process terminates normally during shutdown, airdaemon will terminate normally as well, so it is usually sufficient just to kill the pid in this file at shutdown.</p>
+
+</dd>
+<dt id="airdaemon-pidfile-PID_FILE"><b>--airdaemon-pidfile</b>=<i>PID_FILE</i></dt>
+<dd>
+
+<p>Write the process identifier of the airdaemon process to <i>PID_FILE</i>. This option exists to facilitate the termination of the forked airdaemon process by shutdown scripts.</p>
+
+</dd>
+<dt id="no-daemon"><b>--no-daemon</b></dt>
+<dd>
+
+<p>Do not actually daemonize. Mainly useful for testing/debugging.</p>
+
+</dd>
+</dl>
+
+<h2 id="Logging-Options">Logging Options</h2>
+
+<p>These options are used to specify how log messages are routed. airdaemon can log to standard error, regular files, or the UNIX syslog facility.</p>
+
+<dl>
+
+<dt id="log-LOG_SPECIFIER"><b>--log</b> <i>LOG_SPECIFIER</i></dt>
+<dd>
+
+<p>Specifies destination for log messages. <i>LOG_SPECIFIER</i> can be a syslog(3) facility name, the special value <b>stderr</b> for standard error, or the <i>absolute</i> path to a file for file logging. Standard error logging is only available in <b>--daemon</b> mode if <b>--foreground</b> is present. The default log specifier is <b>stderr</b> if available, <b>user</b> otherwise.</p>
+
+</dd>
+<dt id="loglevel-LOG_LEVEL"><b>--loglevel</b> <i>LOG_LEVEL</i></dt>
+<dd>
+
+<p>Specify minimum level for logged messages. In increasing levels of verbosity, the supported log levels are <b>quiet</b>, <b>error</b>, <b>critical</b>, <b>warning</b>, <b>message</b>, <b>info</b>, and <b>debug</b>. The default logging level is <b>warning</b>.</p>
+
+</dd>
+<dt id="verbose"><b>--verbose</b></dt>
+<dd>
+
+<p>Equivalent to <b>--loglevel debug</b>.</p>
+
+</dd>
+<dt id="version"><b>--version</b></dt>
+<dd>
+
+<p>If present, print version and copyright information to standard error and exit.</p>
+
+</dd>
+</dl>
+
+<h1 id="EXAMPLES">EXAMPLES</h1>
+
+<p>The following will ping www.cert.org every 15 seconds until ping returns sucess:</p>
+
+<pre><code>    airdaemon --retry 15 -- ping -c 1 www.cert.org</code></pre>
+
+<p>The same as above, except the delay will double until reaching a maximum of 15 minutes:</p>
+
+<pre><code>    airdaemon --retry 15 --retry-max 900 -- ping -c 1 www.cert.org</code></pre>
+
+<h1 id="BUGS">BUGS</h1>
+
+<p>Known issues are listed in the <b>README</b> file in the Airframe source distribution. Note that airdaemon should be considered alpha-quality software; not every concievable input and aggregation is exhaustively tested at each release, and specific features may be completely untested. Please be mindful of this before deploying airdaemon in production environments. Bug reports and feature requests may be sent via email to &lt;netsa-help@cert.org&gt;.</p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Tony Cebzanov and Brian Trammell for the CERT Network Situational Awareness Group, http://www.cert.org/netsa</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p>filedaemon(1)</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

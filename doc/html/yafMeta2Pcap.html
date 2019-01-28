@@ -1,0 +1,233 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>yafMeta2Pcap</b> - YAF PCAP Metadata File Parser and PCAP Creator</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<pre><code>    yafMeta2Pcap [--pcap-meta-file META_FILE_PATTERN]
+                 [--pcap PCAP_FILE_PATTERN]
+                 [--caplist CAP_FILE_NAME]
+                 [--metalist META_FILE_NAME]
+                 [--out OUTPUT_SPECIFIER]
+                 [--hash FLOW_KEY_HASH]
+                 [--time FLOW_START_MILLISECONDS]
+                 [--etime FLOW_END_MILLISECONDS]
+                 [--packets NUM_PACKETS]
+                 [--yaf-program PATH_TO_YAF]
+                 [--verbose]</code></pre>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>yaf</b> has several PCAP export options available. <b>yaf</b> will create a pipe-delimited file that contains information to assemble a PCAP file for any particular flow. <b>yafMeta2Pcap</b> parses the metadata file created by <b>yaf</b> and creates a PCAP file for the given flow identified by the flow key hash and start time.</p>
+
+<p><b>yafMeta2Pcap</b> has the ability to read IPFIX from <b>getFlowKeyHash</b> on stdin to avoid typing the flow key hash and start time on the command line. <b>yafMeta2Pcap</b> will accept the first 2 records from <b>getFlowKeyHash</b>. If the first 2 records have the same start time, <b>yafMeta2Pcap</b> will sum the values for packetTotalCount to determine the total number of packets to search for (to account for uniflows). <b>yafMeta2Pcap</b> will only search for the first hash and start time it receives. See below for examples for using IPFIX input.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<p>The following options are required for <b>yafMeta2Pcap</b> to create the PCAP file.</p>
+
+<dl>
+
+<dt id="pcap-meta-file-META_FILE_PATTERN"><b>--pcap-meta-file</b> <i>META_FILE_PATTERN</i></dt>
+<dd>
+
+<p><i>META_FILE_NAME</i> is the path to the pcap-meta-file as created by <b>yaf</b>. <i>META_FILE_NAME</i> is a file glob pattern, which must be escaped or quoted to prevent the shell expansion if using wildcards. Files that match this pattern will be processed by <b>yafMeta2Pcap</b>. Alternatively, you can use <b>--metalist</b> to provide a text file with an ordered list of pcap-meta-files created by <b>yaf</b>. Alternatively, you can set the YAF_PCAP_META_FILE environment variable to the full path to the pcap-meta-file created by <b>yaf</b> to avoid including it to the command line.</p>
+
+</dd>
+<dt id="pcap-PCAP_FILE_NAME"><b>--pcap</b> <i>PCAP_FILE_NAME</i></dt>
+<dd>
+
+<p><i>PCAP_FILE_NAME</i> is the path to the PCAP file that was given to <b>yaf</b> to create the pcap-meta-file. <i>PCAP_FILE_NAME</i> is a file glob pattern, which must be escaped or quoted to prevent shell expansion if using wildcards. The option is only required if full path is not available in the PCAP metadata file. <b>yafMeta2Pcap</b> will open subsequent PCAPs only when the third column in the PCAP-meta-file changes. For example, if the third column is 0, <b>yafMeta2Pcap</b> will open the first PCAP given to <b>--pcap</b>. Alternatively, you can use <b>--caplist</b> to give a text file with an ordered list of PCAP files.</p>
+
+</dd>
+<dt id="caplist-CAP_FILE_NAME"><b>--caplist</b> <i>CAP_FILE_NAME</i></dt>
+<dd>
+
+<p>Instead of listing multiple PCAP files, use <i>CAP_FILE_NAME</i> as an ordered newline-delimited list of pathnames to PCAP dumpfiles as read by <b>yaf</b>. Alternatively, you can set the YAF_CAPLIST environment variable to the full path of the <i>CAP_FILE_NAME</i> to avoid adding it to the command line.</p>
+
+</dd>
+<dt id="metalist-META_FILE_NAME"><b>--metalist</b> <i>META_FILE_NAME</i></dt>
+<dd>
+
+<p>Instead of listing multiple PCAP metadata files, use <i>META_FILE_NAME</i> as an ordered newline-delimited list of pathnames to PCAP metadata files as created by <b>yaf</b>. Alternatively, you can set the YAF_PCAP_META_LIST environment variable to the <i>META_FILE_NAME</i> to avoid adding it to the command line.</p>
+
+</dd>
+<dt id="out-OUTPUT_SPECIFIER"><b>--out</b> <i>OUTPUT_SPECIFIER</i></dt>
+<dd>
+
+<p>The full path of the PCAP file that will be created containing just the packets from the given flow. If this option is not present, <b>yafMeta2Pcap</b> will simply write the filename(s) of the PCAP(s) that contained the flow with the given <i>FLOW_KEY_HASH</i>. <b>yafMeta2Pcap</b> will overwrite any existing file at <i>OUTPUT_SPECIFIER</i>.</p>
+
+</dd>
+<dt id="hash-FLOW_KEY_HASH"><b>--hash</b> <i>FLOW_KEY_HASH</i></dt>
+<dd>
+
+<p>The flow key hash of the flow as created by <b>getFlowKeyHash</b>. Use <b>getFlowKeyHash</b> with the flow&#39;s 5-tuple and vlan to calculate the flow key hash. If this option is not present, <b>yafMeta2Pcap</b> assumes IPFIX will be present on stdin.</p>
+
+</dd>
+<dt id="time-FLOW_START_MILLISECONDS"><b>--time</b> <i>FLOW_START_MILLISECONDS</i></dt>
+<dd>
+
+<p>The milliseconds since epoch time of the start time of the flow. <b>getFlowKeyHash</b> can calculate the milliseconds since epoch given the date and time. Not required, but suggested. If <i>FLOW_START_MILLISECONDS</i> is not provided, all packets matching the <i>FLOW_KEY_HASH</i> will be given, which may include multiple flows.</p>
+
+</dd>
+<dt id="etime-FLOW_END_MILLISECONDS"><b>--etime</b> <i>FLOW_END_MILLISECONDS</i></dt>
+<dd>
+
+<p>The milliseconds since epoch time of the end time of the flow. This value is exported by <b>getFlowKeyHash</b> if present and accepted by <b>yafMeta2Pcap</b>. Not required, but suggested. Including this value will likely speed up search times. This argument overrides any end time information collected via IPFIX from <b>getFlowKeyHash</b>/</p>
+
+</dd>
+<dt id="packets-NUM_PACKETS"><b>--packets</b> <i>NUM_PACKETS</i></dt>
+<dd>
+
+<p><i>NUM_PACKETS</i> is the total number of packets for the bi-flow. This optional argument may speed up processing because it tells <b>yafMeta2Pcap</b> when it has found the entire flow. This can also be used if you only want the first <i>NUM_PACKETS</i> of the flow instead of the entire flow. This argument overrides any packet count information collected via IPFIX from <b>getFlowKeyHash</b>.</p>
+
+</dd>
+<dt id="yaf-program-PATH_TO_YAF"><b>--yaf-program</b> <i>PATH_TO_YAF</i></dt>
+<dd>
+
+<p><i>PATH_TO_YAF</i> is the location of the <b>yaf</b> program to use to create the PCAP file if <i>OUTPUT_SPECIFIER</i> is present and the pcap-meta-file has the format:</p>
+
+<p>hash | stime | path_to_pcap</p>
+
+<p>If not specified, <b>yafMeta2Pcap</b> assumes there is program <b>yaf</b> on your $PATH.</p>
+
+</dd>
+<dt id="verbose"><b>--verbose</b></dt>
+<dd>
+
+<p>If present, print debug information to stdout.</p>
+
+</dd>
+</dl>
+
+<h1 id="Examples">Examples</h1>
+
+<p>In the following examples, the dollar sign (&quot;$&quot;) represents the shell prompt. The text after the dollar sign represents the command line. Lines have been wrapped for improved readability, and the back slash (&quot;\&quot;) is used to indicate a wrapped line.</p>
+
+<ul>
+
+<p>The following example shows how to run <b>yaf</b>, <b>getFlowKeyHash</b>, and <b>yafMeta2Pcap</b> to create a PCAP for a given flow.</p>
+
+<pre><code> $ yaf --in /data/some_large_file.pcap --out /data/ipfix.yaf \
+      --pcap-meta-file /tmp/pcap-info
+ 
+ $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+                --dport 80 --protocol 6 --vlan 3  --date 2011-03-21 \
+                --time 16:15:54.256
+ 
+             sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+     10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735|       1300724154256
+ 
+ FILE PATH: 256/100819735-2011321161554_0.pcap
+
+ $ yafMeta2Pcap --pcap-meta-file /tmp/pcap-info20150107141533_00000.meta \
+                --pcap /data/some_large_file.pcap \
+               --out /data/my-new-pcap.pcap \
+               --hash 100819735 --time 1300724154</code></pre>
+
+<p>The following example shows how to run <b>getFlowKeyHash</b> directly to <b>yafMeta2Pcap</b> and use environment variables.</p>
+
+<pre><code>  $ export YAF_PCAP_META_FILE=/tmp/pcap-info20150107141533_00000.meta
+  $ export YAF_CAPLIST=/tmp/yafcaplist.txt
+  $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+                --dport 80 --protocol 6 --vlan 3  --date 2011-03-21 \
+                --time 16:15:54.256 -I | yafMeta2Pcap -o /data/my-new-pcap -n 10</code></pre>
+
+<p>The following example demonstrates how to use SiLK tools with <b>getFlowKeyHash</b> and <b>yafMeta2Pcap</b>. This assumes the appropriate environment variables are set.</p>
+
+<pre><code>  $ rwfilter --application=80 --pass-dest=stdout --max-pass-records=2 file.rw | \
+       rwsilk2ipfix | getFlowKeyHash -I | yafMeta2Pcap -o /data/mynewpcap.pcap</code></pre>
+
+<p>The following example shows how to configure <b>yaf</b> to create rolling PCAP files and use <b>yafMeta2Pcap</b> to create a PCAP for a specific flow.</p>
+
+<pre><code> $ yaf --in eth0 --out localhost --ipfix tcp --ipfix-port 18000 \
+       --pcap-meta-file /tmp/pcap-info --pcap /data/pcap \
+       --live pcap --index-pcap
+
+ $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+                  --dport 80 --protocol 6 --vlan 3  --date 2011-03-21 \
+                  --time 16:15:54.256
+
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+    10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735|       1300724154256
+
+ FILE PATH: 256/100819735-2011321161554_0.pcap
+
+ $ yafMeta2Pcap --pcap-meta-file /tmp/pcap-info20150107141533_00000.meta \
+                --out /data/my-new-pcap.pcap \
+                --hash 100819735 --time 1300724154</code></pre>
+
+<p>The following example shows how to run <b>yaf</b> creating rolling PCAP files and use <b>yafMeta2Pcap</b> to create a PCAP file for a particular flow.</p>
+
+<pre><code> $ yaf --in eth0 --out localhost --ipfix tcp --ipfix-port 18000 \
+       --pcap-meta-file /tmp/pcap-info --pcap /data/pcap \
+       --live pcap
+
+ $ yafMeta2Pcap --pcap-meta-file=&quot;/tmp/pcap-info*&quot;\
+                -o /data/new.pcap \
+                --hash 100819735 --time 1300724154</code></pre>
+
+<p>The following example shows how to run <b>yaf</b> over a list of pcap files and use <b>yafMeta2Pcap</b> to create a PCAP for a specific flow</p>
+
+<pre><code> $ yaf --in /tmp/caplist.txt --out /tmp/yaffile.yaf \
+       --pcap-meta-file /tmp/pcap-info --caplist
+    
+ $ yafMeta2Pcap --caplist /tmp/caplist.txt -o flow.pcap \
+                --hash 100819735 --time 1300724154 \
+                --pcap-meta-file &quot;/tmp/pcap-info*&quot; -v
+    
+ Found 1 packets that match criteria.</code></pre>
+
+</ul>
+
+<h1 id="Known-Issues">Known Issues</h1>
+
+<p>If the pcap-meta-file was generated in a way that it has the form:</p>
+
+<p>hash | stime | path_to_pcap</p>
+
+<p>and an <i>OUTPUT_SPECIFIER</i> is provided to <b>--out</b>, <b>yafMeta2Pcap</b> creates a temporary file with the PCAP file names that contain the flow it is searching for. This temporary file is placed in <i>/tmp</i> by default, but the location can be configured through the use of the <i>TMPDIR</i> environment variable. The temporary file is deleted upon termination of <b>yafMeta2Pcap</b>.</p>
+
+<p>Bug reports may be sent directly to the Network Situational Awareness team at &lt;netsa-help@cert.org&gt;.</p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Emily Sarneso and the CERT/CC Engineering Team, &lt;http://www.cert.org/netsa&gt;.</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p>yaf(1), getFlowKeyHash(1)</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

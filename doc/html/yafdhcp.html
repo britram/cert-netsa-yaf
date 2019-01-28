@@ -1,0 +1,131 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>yaf</b> <b>dhcp</b> <b>fingerprinting</b></p>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p>There are several ways to perform Operating System Identification. Many tools, based on the well-known p0f tool, look at characteristics in the TCP/IP packet headers. DHCP fingerprinting is another way of performing OS identification. By looking at the order of the DHCP options in the DHCP requests from the Operating System&#39;s DHCP client, it may be possible to identify the client&#39;s OS version. The <b>yaf</b> DHCP fingerprinting plugin does exactly that. For flows that <b>yaf</b> has labeled as DHCP, <b>yaf</b> will export the DHCP options, if available, from the payload captured for that flow. <b>yaf</b> specifically exports the parameter list in Option 55. Option 55 requests a list of parameters. The order in which they are requested can usually identify the OS of the requesting IP address.</p>
+
+<p><b>yaf</b> also exports the DHCP Vendor Class Identifier, if available. The Vendor Class ID is included in DHCP Option 60 and often provides specific information about the hardware of the sender. The Vendor ID can often assist in identifying an OS. <b>yaf</b> does not match an OS based on the vendor ID, it simply exports the information if it is available.</p>
+
+<p>Fingerbank (www.fingerbank.org) is the official website for DHCP fingerprints. Previously, Fingerbank distributed a dhcp_fingerprints.conf file that contained the list of options that correspond to each OS. They now distribute the list of fingerprints in the form of an SQLite database or you can query the fingerprints online or through their free public API. Due to this change, <b>yaf</b> now exports the list of DHCP options and the vendor code (if available) instead of comparing to the fingerprint configuration file. However, &lt;yaf&gt; still distributes an older version of the dhcp_fingerprints.conf and it can be used if it is provided on the command line or through the configuration file to the <code>--plugin-conf</code> option. <b>yaf</b> will be able to parse any INI config file that follows the format of the dhcp_fingerprints.conf file.</p>
+
+<p>This feature is presently experimental and the DHCP data is not collected by the SiLK tools. Use an IPFIX mediator, such as <b>super_mediator(1)</b>, to collect and view the DHCP fields exported by <b>yaf</b>. <b>yaf</b> must be configured for application labeling and plugin support to use this plugin.</p>
+
+<h1 id="DHCP-Template-Format">DHCP Template Format</h1>
+
+<p><b>yaf</b>&#39;s output consists of an IPFIX message stream. <b>yaf</b> uses a variety of templates for IPFIX data records. <b>yaf</b> uses a subTemplateMultiList to export optional information elements, such as Deep Packet Inspection and p0f fields, related to the flow. Below is the format of the DHCP fingerprinting record that will be exported if Option 55 is present or a vendor class ID (Option 60) was present in the packet.</p>
+
+<dl>
+
+<dt id="dhcpOption-CERT-PEN-6871-IE-297-1-octet-unsigned-basicList"><b>dhcpOption</b> CERT (PEN 6871) IE 297, 1 octet, unsigned, basicList</dt>
+<dd>
+
+<p>The list of requested parameters found in DHCP Option 55.</p>
+
+</dd>
+<dt id="dhcpVendorCode-CERT-PEN-6871-IE-243-variable-length"><b>dhcpVendorCode</b> CERT(PEN 6871) IE 243, variable length</dt>
+<dd>
+
+<p>The DHCP vendor class ID found in Option 60 of the DHCP packet. This field may help further identify the operating system of the sender.</p>
+
+</dd>
+<dt id="dhcpOption-CERT-PEN-6871-IE-297-1-octet-unsigned-basicList1"><b>dhcpOption</b> CERT (PEN 6871) IE 297, 1 octet, unsigned, basicList</dt>
+<dd>
+
+<p>The list of requested parameters found in DHCP Option 55 for the reverse flow. This will only be exporter if the reversePacketTotalCount field is greater than 0 and Option 55 or Option 60 is present.</p>
+
+</dd>
+<dt id="reverseDhcpVendorCode-CERT-PEN-6871-IE-16899-variable-length"><b>reverseDhcpVendorCode</b> CERT (PEN 6871) IE 16899, variable length</dt>
+<dd>
+
+<p>The DHCP vendor class ID for the reverse flow. This will only be exported if the reversePacketTotalCount field is greater than 0 and either Option 55 or Option 60 is present.</p>
+
+</dd>
+</dl>
+
+<p>If a fingerprinting configuration file is provided to <code>--plugin-conf</code>, then <b>yaf(1)</b> will export the following fields:</p>
+
+<dl>
+
+<dt id="dhcpFingerPrint-CERT-PEN-6871-IE-242-variable-length"><b>dhcpFingerPrint</b> CERT (PEN 6871) IE 242, variable length</dt>
+<dd>
+
+<p>The DHCP fingerprint as matched from the dhcp_fingerprint.conf file. This will be the description of the OS as found in the conf file.</p>
+
+</dd>
+<dt id="dhcpVendorCode-CERT-PEN-6871-IE-243-variable-length1"><b>dhcpVendorCode</b> CERT (PEN 6871) IE 243, variable length</dt>
+<dd>
+
+<p>The DHCP vendor class ID found in Option 60 of the DHCP packet. This field may help further identify the operating system of the sender.</p>
+
+</dd>
+<dt id="reverseDhcpFingerPrint-CERT-PEN-6871-IE-16898-variable-length"><b>reverseDhcpFingerPrint</b> CERT (PEN 6871) IE 16898, variable length</dt>
+<dd>
+
+<p>The DHCP fingerprint for the reverse flow. This will only be exported if the reversePacketTotalCount field is greater than 0.</p>
+
+</dd>
+<dt id="reverseDhcpVendorCode-CERT-PEN-6871-IE-16899-variable-length1"><b>reverseDhcpVendorCode</b> CERT (PEN 6871) IE 16899, variable length</dt>
+<dd>
+
+<p>The DHCP vendor class ID for the reverse flow. This will only be exported if the reversePacketTotalCount field is greater than 0.</p>
+
+</dd>
+</dl>
+
+<h1 id="Examples">Examples</h1>
+
+<p>Running YAF with DHCP fingerprinting:</p>
+
+<p><code>yaf --in eth0 --out /data/yaf/yaf --rotate 120 --plugin-name=/usr/local/lib/yaf/dhcp_fp_plugin.la --applabel --max-payload=500 --live pcap</code></p>
+
+<p>Running YAF with DPI and DHCP fingerprinting:</p>
+
+<p><code>yaf --in eth0 --out localhost --ipfix tcp --ipfix-port=18000 --plugin-name=/usr/local/lib/yaf/dpacketplugin.la,/usr/local/lib/yaf/dhcp_fp_plugin.la --applabel --max-payload=1024 --live pcap</code></p>
+
+<p>Running YAF with DHCP fingerprinting and a fingerprint configuration file:</p>
+
+<p><code>yaf --in eth0 --out /data/yaf/yaf --rotate 120 --plugin-name=/usr/local/lib/yaf/dhcp_fp_plugin.la --applabel --max-payload=500 --live pcap --plugin-conf=/usr/local/etc/dhcp_fingerprints.conf</code></p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>CERT Network Situational Awareness Group Engineering Team, http://www.cert.org/netsa</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p><b>yaf(1)</b>, <b>yafscii(1)</b>, <b>yafdpi(1)</b>, <b>applabel(1)</b>, <b>super_mediator(1)</b></p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

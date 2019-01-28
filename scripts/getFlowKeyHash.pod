@@ -1,0 +1,280 @@
+=pod
+
+=head1 NAME
+
+B<getFlowKeyHash> - YAF Flow Key Calculator
+
+=head1 SYNOPSIS
+
+    getFlowKeyHash [--in INPUT_SPECIFIER]
+                   [--out OUTPUT_SPECIFIER]
+                   [--sip4 IPV4_ADDRESS] [--dip4 IPV4_ADDRESS]
+                   [--sip6 IPV6_ADDRESS] [--dip6 IPV6_ADDRESS]
+                   [--sport SOURCE_PORT] [--dport DESTINATION_PORT]
+                   [--protocol PROTOCOL] [--vlan VLAN_ID]
+                   [--date FLOW_START_DATE] [--time FLOW_START_TIME]
+                   [--ipfix][--reverse][--snmp]
+
+=head1 DESCRIPTION
+
+B<getFlowKeyHash> takes information about a flow and calculates the
+B<yaf> flow key hash and prints the flow records along with the hash
+to the screen or to the output specifier in a textual, bar (|) delimited
+format. Together, the flow key hash and the start time of the
+flow will create a unique identifier for a flow.  The flow key hash and
+start time are used to identify flows with B<yaf>'s pcap export options.
+If given the start time, B<getFlowKeyHash> will print the
+file path to the flow's pcap (helpful if B<yaf> was run with the
+--pcap-per-flow option) and the milliseconds since epoch time (helpful
+for use with B<yaf>'s pcap-meta-file).
+
+B<getFlowKeyHash> reads IPFIX from the file provided to --in or from
+standard input when no file names are specified and --sip[4|6] and --dip[4|6]
+are not available.
+
+B<getFlowKeyHash> will export the flow key hash and start time in IPFIX
+if I<--ipfix> is provided.
+
+=head1 OPTIONS
+
+=head2 Input Options
+
+Either --in or the remaining options are required for B<getFlowKeyHash>
+to calculate the flow key.
+
+=over 4
+
+=item B<--in> I<INPUT_SPECIFIER>
+
+I<INPUT_SPECIFIER> is an input specifier. The default is to read from
+standard input.  Otherwise, it is a filename. The string B<-> may be used to
+read from standard input.  The input should be IPFIX.  The internal template
+contains the following fields:
+
+=over 4
+
+=item *
+
+flowStartMilliseconds
+
+=item *
+
+sourceIPv4Address, sourceIPv6Address
+
+=item *
+
+destinationIPv4Address, destinationIPv6Address
+
+=item *
+
+sourceTransportPort
+
+=item *
+
+destinationTransportPort
+
+=item *
+
+ingressInterface
+
+=item *
+
+vlanId
+
+=item *
+
+protocolIdentifier
+
+=back
+
+The ingressInterface is included because B<rwsilk2ipfix> exports the vlanId
+in this field.  The ingressInterface field is only used if it is populated
+and vlanId is not.  If both fields contain non-zero values, vlanId is used
+to calculate the flow key hash, and ingressInterface is ignored.
+
+=item B<--sip4> I<IPV4_ADDRESS>
+
+I<IPV4_ADDRESS> should be the source address of the flow in the form
+127.0.0.1.  Either --sip4 or --sip6 must be present if --in is not present.
+
+=item B<--dip4> I<IPV4_ADDRESS>
+
+I<IPV4_ADDRESS> should be the destination address of a flow in the form
+127.0.0.1.  Either --dip4 or --dip6 must be present if --in is not present.
+
+=item B<--sip6> I<IPV6_ADDRESS>
+
+I<IPV6_ADDRESS> should be the source IPv6 address of a flow in the form
+2001:48af::1:1.  Either --sip6 or --sip4 must be present if --in is not
+present.
+
+=item B<--dip6> I<IPV6_ADDRESS>
+
+I<IPV6_ADDRESS> should be the destination IPv6 address of a flow in the
+form 2001:48af::1:1. Either --dip6 or --dip4 must be present if --in is
+not present.
+
+=item B<--sport> I<SOURCE_PORT>
+
+I<SOURCE_PORT> should be the source port of the flow.  This number should
+be between 0 and 66535.  The default value is 0.
+
+=item B<--dport> I<DESTINATION_PORT>
+
+I<DESTINATION_PORT> should be the destination port of the flow.  This number
+should be between 0 and 65535.  The default value is 0.
+
+=item B<--protocol> I<PROTOCOL>
+
+I<PROTOCOL> is the protocol of the flow.  For TCP, I<PROTOCOL> is 6.  For UDP,
+I<PROTOCOL> is 17.  The default value is 0.
+
+=item B<--vlan> I<VLAN>
+
+I<VLAN> is the vlan ID of the flow, if available.  The default value is 0.
+
+=back
+
+=head2 Output Options
+
+This option controls where B<getFlowKeyHash> will send its output.  The default
+is to stdout.
+
+=over 4
+
+=item B<--out> I<OUTPUT_SPECIFIER>
+
+I<OUTPUT_SPECIFIER> is an output specifier.  The default is to write to
+stdout.  Otherwise, a filename can be given.  The string B<-> may be used
+to write to stdout. The IPFIX export template contains the following fields:
+
+=over 4
+
+=item *
+
+flowStartMilliseconds
+
+=item *
+
+flowEndMilliseconds
+
+=item *
+
+packetTotalCount
+
+=item *
+
+yafFlowKeyHash
+
+=item *
+
+reverseFlowKeyHash
+
+=back
+
+=item B<--ipfix>
+
+If provided, B<getFlowKeyHash> will export the flow key hash, start time,
+end time (if available), packet count (if available), and reverse flow
+key hash (if B<--reverse> is present) in IPFIX to the I<OUTPUT_SPECIFIER>
+provided to I<--out> or stdout by default.  This option is meant to
+be used when using with B<yafMeta2Pcap>.
+
+=back
+
+=head2 Optional Arguments
+
+The following options are optional and are only necessary to calculate
+the file path of the pcap for the flow.  B<yaf> uses the milliseconds of
+the flow's start time as the file directory.  The date and time is also
+used in pcap file's name.  If the date and time are given, B<getFlowKeyHash>
+will also calculate the milliseconds since epoch, which is useful when using
+B<yaf>'s pcap-meta-files and the B<yafMeta2Pcap> tool.
+
+=over 4
+
+=item B<--date> I<FLOW_START_DATE>
+
+Specify the date in YYYY-MM-DD format; time is in UTC.
+
+=item B<--time> I<FLOW_START_TIME>
+
+Specify the time in HH:MM:SS[.sss] format.
+
+=item B<--reverse>
+
+Calculate the reverse flow key hash by swapping the source
+and destination IP addresses and ports.  If this option is present and
+B<--ipfix> is present, B<getFlowKeyHash> will also export the
+reverse flow key hash in IPFIX.
+
+=item B<--snmp>
+
+If present, B<getFlowKeyHash> will ignore the value in ingressInterface
+field.  SiLK encodes either the VLAN ID or the SNMP interface in
+the ingressInterface IPFIX field.  If SiLK was configured to pack the
+SNMP interface, this value will interfere with the correct calculation
+of the B<getFlowKeyHash>. You also may want to ignore this field if B<yaf>
+is run with the B<--no-vlan-in-key> option which forces B<yaf> to not use
+the VLAN in the flow key hash calculation. Alternatively, you may set 
+the environment variable YAF_IGNORE_SNMP to 1 to always ignore 
+this value in flow key hash calculations.
+
+=back
+
+=head1 Examples
+
+In the following examples, the dollar sign ("$") represents the shell
+prompt.  The text after the dollar sign represents the command line.
+Lines have been wrapped for improved readability, and the back slash
+("\") is used to indicate a wrapped line.
+
+=over 1
+
+ $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+                  --dport 80 --protocol 6 --vlan 3
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash
+    10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735
+
+
+ $ getFlowKeyHash --sip4 10.10.25.11 --dip4 10.10.26.12 --sport 1586 \
+               --dport 80 --protocol 6 --vlan 3  --date 2011-03-21 \
+               --time 16:15:54.256
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+    10.10.25.11|    10.10.26.12| 1586|   80|  6|    3| 100819735|       1300724154256
+
+ $ rwfilter --pass-destination=stdout --application=0 \
+            --start-date=2014/01/29:16:27 \
+            --type=all --max-pass-records=1
+            | rwsilk2ipfix | getFlowKeyHash
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+    10.20.11.51|    10.64.22.15|61902| 8080|  6|    0|4053426924|       1391012769175
+
+ $ yaf --in mypcap.pcap --out - | getFlowKeyHash
+            sIP|            dIP|sPort|dPort|pro| vlan|      hash|                  ms
+  127.0.224.172|        5.5.5.5| 1324|   80|  6|    0|2133427641|       1207802501882
+
+ $ rwfilter --pass-dest=stdout --application=53 \
+            --start-date=2014/01/29:16:27 \
+            --type=all --max-pass-records=2 \
+            | rwsilk2ipfix | getFlowKeyHash -I | \
+            yafMeta2Pcap --pcap-meta-file="/data/pcapmeta/*" \
+            --out myDNSpcap.pcap
+
+=back
+
+=head1 Known Issues
+
+Bug reports may be sent directly to the Network Situational Awareness team at
+E<lt>netsa-help@cert.orgE<gt>.
+
+=head1 AUTHORS
+
+Emily Sarneso and the CERT Network Situational Awareness Group Engineering Team,
+E<lt>http://www.cert.org/netsaE<gt>.
+
+=head1 SEE ALSO
+
+yaf(1)
+
+=cut

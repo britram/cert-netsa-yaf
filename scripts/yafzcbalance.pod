@@ -1,0 +1,145 @@
+=pod
+
+=head1 NAME
+
+B<yafzcbalance> - PF_RING ZC Load balancer for YAF.
+
+=head1 SYNOPSIS
+
+    yafzcbalance [--in DEVICE]
+                 [--cluster CLUSTER_ID]
+                 [--num NUM_YAFS]
+                 [--core CORE_ID]
+                 [--time TIME_CORE_ID]
+                 [--pidfile FILENAME]
+                 [--daemon]
+                 [--log LOG_FILE]
+                 [--user BECOME_USER]
+                 [--stats SECONDS]
+                 [--version]
+                 
+
+=head1 DESCRIPTION
+
+B<yafzcbalance> is a tool that load balances packets received on one or more
+interfaces to multiple consumer processes.  This process hashes the incoming packets
+and sends them to the appropriate B<yaf(1)> process listening on a cluster ID/queue.
+
+B<yafzcbalance> is based off of the example application, zbalance_ipc,
+that is distributed with PF_RING.  Changes have been made to simplify 
+the process to run specifically with B<yaf(1)>.
+
+B<yafzcbalance> allows you to bind the application to a particular core. Additionally,
+you can bind the time pulse thread to the same or another core.
+
+B<yafzcbalance> or a similar application is required for running B<yaf>
+on zc interfaces. B<yaf> simply listens on a cluster ID, not on the zc interface.
+This application will listen on the interface(s) and distribute packets to
+the appropriate cluster.
+
+=head1 OPTIONS
+
+The following options are available for B<yafzcbalance>.
+
+=over 4
+
+=item B<--in> I<DEVICE>
+
+The I<DEVICE> is a comma-separated list of devices. Typically when the device is
+in zero-copy mode, each device name will be in the form zc:<device_name>.
+
+=item B<--cluster> I<CLUSTER_ID>
+
+I<CLUSTER_ID> is the unique ID for the PF_RING cluster. All applications belonging
+to the same cluster can share incoming packets in zero-copy.  There can be multiple
+queues within a cluster that can be used for filtering and distributing packets 
+towards multiple applications.
+
+=item B<--num> I<NUM_YAFS>
+
+I<NUM_YAFS> is the number of B<yaf(1)> applications that B<yafzcbalance> will
+distribute packets to.  The default is 1.
+
+=item B<--core> I<CORE_ID>
+
+Bind B<yafzcbalance> to core I<CORE_ID>.
+
+=item B<--time> I<TIME_CORE_ID>
+
+By default, hardware timestamps are disabled in zero-copy mode. B<yaf(1)>
+requires that a packet have a timestamp, so B<yafzcbalance> creates a 
+thread that will add a timestamp to the PF_RING packet header. Use this
+option to bind that thread to core I<TIME_CORE_ID>.
+
+=item B<--pidfile> I<PID_FILE>
+
+I<PID_FILE> is the complete path to write the process ID of B<yafzcbalance>.
+
+=item B<--daemon>
+
+Run B<yafzcbalance> as a daemon.
+
+=item B<--log> I<LOG_FILE>
+
+Write any log messages and process statistics to I<LOG_FILE>.  By default,
+process statistics are disabled.  To turn on periodic process statistics,
+use the B<--stats> option.  Otherwise, you can send B<yafzcbalance> the
+SIGUSR1 process signal to write process statistics to the I<LOG_FILE>
+or stdout if B<--log> is not present.
+
+=item B<--user> I<BECOME_USER>
+
+After opening the live capture device, drop privilege to the named
+user I<BECOME_USER>. 
+
+=item B<--stats> I<SECONDS>
+
+If present, B<yafzcbalance> will write process statistics to the I<LOG_FILE>
+or stdout every I<SECONDS> seconds.  B<yafzcbalance> will write the per-interface
+statistics.
+
+=item B<--version>
+
+If present, print version and copyright information to standard error and exit.
+
+=back
+
+=head1 Examples
+
+In the following examples, the dollar sign ("$") represents the shell
+prompt.  The text after the dollar sign represents the command line.
+
+=over 1
+
+ $ yafzcbalance --in zc:p6p1,zc:p6p1 -c 99 -n 2 -d -l /var/log/yafzcbalance.log
+ 
+ $ yaf --in 99:0 --live zc --out localhost --ipfix tcp --ipfix-port=18000 --silk
+ 
+ $ yaf --in 99:1 --live zc --out localhost --ipfix tcp --ipfix-port=18001 --silk
+
+=back
+
+=head1 Known Issues
+
+B<yafzcbalance> will not start if B<yaf> is already running on the cluster.
+If you see this error message:
+
+    *** cluster recovery not supported ***
+    pfring_zc_create_cluster error [Operation not supported]Please check your hugetlb configuration
+
+Terminate the B<yaf> processes and restart B<yafzcbalance>.  B<yafzcbalance> must
+start before B<yaf>.
+
+Bug reports may be sent directly to the Network Situational Awareness team at
+E<lt>netsa-help@cert.orgE<gt>.
+
+=head1 AUTHORS
+
+Emily Sarneso and the CERT Network Situational Awareness Group Engineering Team,
+E<lt>http://www.cert.org/netsaE<gt>.
+
+=head1 SEE ALSO
+
+yaf(1)
+
+=cut

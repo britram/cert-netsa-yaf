@@ -1,0 +1,188 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>filedaemon</b> - Invoke another program on files matching a glob pattern</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<pre><code>    filedaemon  --in INPUT_GLOB [--out OUTPUT_DIR]
+                --nextdir PROCESSED_INPUT_DIRECTORY
+                --faildir FAILED_INPUT_DIRECTORY
+                [--extension OUTPUT_EXTENSION]
+                [--poll POLLING_DELAY] [--lock]
+                [--pidfile PID_FILE] [--no-daemon]
+                [--log LOG_SPECIFIER] [--loglevel LOG_LEVEL]
+                [--verbose] [--version]
+                -- PROGRAM [PROGRAM_ARGS]</code></pre>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>filedaemon</b> operates on input files matching a glob(3) pattern. Each matching input file is passed to a child program (specified in the PROGRAM argument) which is expected to read input data from standard input and write the results to standard output. <b>filedaemon</b>&#39;s job is simply to handle the mechanics of directory polling, file globbing, and routing of input and output files on behalf of the child program.</p>
+
+<p>Use of two dashes (--) after all filedaemon command-line switches allows PROGRAM_ARGS to be interpreted by the PROGRAM rather than <b>filedaemon</b> itself. While they are not strictly required if you do not need to pass arguments to PROGRAM, they should be used for consistency.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<h2 id="I-O-Options">I/O Options</h2>
+
+<p>These options control the file locations for input and output files.</p>
+
+<dl>
+
+<dt id="in-INPUT_GLOB"><b>--in</b> <i>INPUT_GLOB</i></dt>
+<dd>
+
+<p><i>INPUT_GLOB</i> is a file glob pattern, which must be escaped or quoted to prevent the shell expansion. Files that match this pattern will be processed by filedaemon. This option is required.</p>
+
+</dd>
+<dt id="out-OUTPUT_DIR"><b>--out</b> <i>OUTPUT_DIR</i></dt>
+<dd>
+
+<p><i>OUTPUT_DIR</i> is a directory in which to place output files. The directory must exist prior to invoking <b>filedaemon</b>, and any files in the directory that match the names of output files will be overwritten. If not specified, the current working directory will be used.</p>
+
+</dd>
+</dl>
+
+<h2 id="Daemon-Options">Daemon Options</h2>
+
+<p>These options control what is done with processed input files, file locking, and other options to facilitate operation as a file daemon.</p>
+
+<dl>
+
+<dt id="nextdir-PROCESSED_INPUT_DIRECTORY"><b>--nextdir</b> <i>PROCESSED_INPUT_DIRECTORY</i></dt>
+<dd>
+
+<p>When reading from files, if this option is present, input files will be moved to <i>PROCESSED_INPUT_DIRECTORY</i> after they are successfully processed. The special string <b>delete</b> will cause successfully processed input to be removed instead. This option is required.</p>
+
+</dd>
+<dt id="faildir-FAILED_INPUT_DIRECTORY"><b>--faildir</b> <i>FAILED_INPUT_DIRECTORY</i></dt>
+<dd>
+
+<p>When reading from files, if this option is present, input files will be moved to <i>FAILED_INPUT_DIRECTORY</i> if processing failed. The special string <b>delete</b> will cause failed input to be removed instead. This option is required.</p>
+
+</dd>
+<dt id="extension-OUTPUT_EXTENSION"><b>--extension</b> <i>OUTPUT_EXTENSION</i></dt>
+<dd>
+
+<p>Replace the input file&#39;s extension with <i>OUTPUT_EXTENSION</i>. For example, if an input file is named &quot;foo.txt&quot;, and this option is &quot;out&quot;, then the output file will be named &quot;foo.out&quot;. If the input file has no extension, then this option&#39;s value will be appended to the filename. If this option is not specified, output files will have the same name as input files, except in the case when the <b>--out</b> option is also not specified, in which case output files will be given a .out extension to avoid clobbering input files.</p>
+
+</dd>
+<dt id="poll-POLLING_DELAY"><b>--poll</b> <i>POLLING_DELAY</i></dt>
+<dd>
+
+<p><i>POLLING_DELAY</i> is the polling delay in seconds; how long filedaemon will wait for new input when none is available. The default is 30 seconds.</p>
+
+</dd>
+<dt id="lock"><b>--lock</b></dt>
+<dd>
+
+<p>Use lockfiles for concurrent file access protection. filedaemon will not process an input file for which a lock file exists, but will do so when the lock file is removed. Lock files are written to the same directory as the input file, and the filename is the input filename (including any extensions) with &quot;.lock&quot; appended.</p>
+
+</dd>
+<dt id="pidfile-PIDFILE"><b>--pidfile</b>=<i>PIDFILE</i></dt>
+<dd>
+
+<p>Write the process identifier of the filedaemon process to <i>PIDFILE</i>. This option exists to facilitate the termination of the forked filedaemon process by shutdown scripts.</p>
+
+</dd>
+<dt id="no-daemon"><b>--no-daemon</b></dt>
+<dd>
+
+<p>Do not actually daemonize. Mainly useful for testing/debugging.</p>
+
+</dd>
+</dl>
+
+<h2 id="Logging-Options">Logging Options</h2>
+
+<p>These options are used to specify how log messages are routed. filedaemon can log to standard error, regular files, or the UNIX syslog facility.</p>
+
+<dl>
+
+<dt id="log-LOG_SPECIFIER"><b>--log</b> <i>LOG_SPECIFIER</i></dt>
+<dd>
+
+<p>Specifies destination for log messages. <i>LOG_SPECIFIER</i> can be a syslog(3) facility name, the special value <b>stderr</b> for standard error, or the <i>absolute</i> path to a file for file logging. Standard error logging is only available in <b>--daemon</b> mode if <b>--foreground</b> is present. The default log specifier is <b>stderr</b> if available, <b>user</b> otherwise.</p>
+
+</dd>
+<dt id="loglevel-LOG_LEVEL"><b>--loglevel</b> <i>LOG_LEVEL</i></dt>
+<dd>
+
+<p>Specify minimum level for logged messages. In increasing levels of verbosity, the supported log levels are <b>quiet</b>, <b>error</b>, <b>critical</b>, <b>warning</b>, <b>message</b>, <b>info</b>, and <b>debug</b>. The default logging level is <b>warning</b>.</p>
+
+</dd>
+<dt id="verbose"><b>--verbose</b></dt>
+<dd>
+
+<p>Equivalent to <b>--loglevel debug</b>.</p>
+
+</dd>
+<dt id="version"><b>--version</b></dt>
+<dd>
+
+<p>If present, print version and copyright information to standard error and exit.</p>
+
+</dd>
+</dl>
+
+<h1 id="EXAMPLES">EXAMPLES</h1>
+
+<p>The following will invoke &quot;yaf&quot; on .pcap files in the /in directory, writing results to the /out directory with a .yaf extension. Processed input files will be moved to the /next directory, and failed input files will be moved to the /fail directory.</p>
+
+<pre><code>    filedaemon -i &quot;/in/*.txt&quot; -o /out -e yaf \
+        --nextdir /next --faildir /fail -- yaf</code></pre>
+
+<p>The same as the first example, but with all input files deleted after processing:</p>
+
+<pre><code>    filedaemon -i &quot;/in/*.txt&quot; -o /out -e yaf \
+        --nextdir delete --faildir delete -- yaf</code></pre>
+
+<p>The same as the first example, but with a polling delay of 10 seconds (instead of the default 30) and an additional --mac parameter passed to yaf:</p>
+
+<pre><code>    filedaemon -i &quot;/in/*.txt&quot; -o /out -e yaf -p 10 \
+        --nextdir /next --faildir /fail -- yaf --mac</code></pre>
+
+<h1 id="BUGS">BUGS</h1>
+
+<p>Known issues are listed in the <b>README</b> file in the Airframe source distribution. Note that Airframe should be considered alpha-quality software; not every concievable input and aggregation is exhaustively tested at each release, and specific features may be completely untested. Please be mindful of this before deploying Airframe in production environments. Bug reports and feature requests may be sent via email to &lt;netsa-help@cert.org&gt;.</p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Tony Cebzanov and Brian Trammell for the CERT Network Situational Awareness Group, http://www.cert.org/netsa</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p>glob(3), airdaemon(1)</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

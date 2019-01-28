@@ -1,0 +1,1681 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>yaf deep packet inspection</b></p>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>yaf</b> can examine packet payloads, capture useful information for a specific protocol, and export it in a protocol-specific template within <b>yaf&#39;s</b> SubTemplateMultiList if <b>yaf</b> is built with plugin support enabled (using the <b>--enable-plugins</b> option to ./configure). It may be necessary to set the LTDL_LIBRARY_PATH environment variable if the plugins were installed in a nonstandard location.</p>
+
+<p>The DPI plugin requires payload capture to be enabled with the <b>--max-payload</b> option. A minimum payload capture length of 384 octets is recommended for best results. <b>--applabel</b> is also required, as the application label determines how the inspection will execute.</p>
+
+<p>DPI in <b>yaf</b> is directly related to application labeling as it will only perform DPI if a match was found during the application labeling phase, and it will only execute an inspection specific to the protocol denoted by the application label.</p>
+
+<p>In order to enable DPI in <b>yaf</b> the following should be added to the command line:</p>
+
+<ul>
+
+<p><code>--plugin-name=/usr/local/lib/yaf/dpacketplugin.la</code></p>
+
+</ul>
+
+<p>You can also add the option switch to specify which protocols to perform DPI:</p>
+
+<ul>
+
+<p><code>--plugin-opts=&quot;53 80 21&quot;</code></p>
+
+</ul>
+
+<p>The above will perform DPI for DNS, HTTP, and FTP.</p>
+
+<p>DPI operates differently depending on whether the protocol is plugin-based or regex-based in the yafApplabelRules.conf file. If the protocol uses a regex rule for application labeling, it will have a list of regular expressions in the yafDPIIRules.conf file that are compared against the captured payload. Any matches are stored and later exported in an IPFIX information element. If the protocol is based on a plugin rule, it will store important information while it is decoding the payload using the dynamically loaded plugin listed in the yafApplabelRules.conf file. See the source code to the plugins included with <b>yaf</b> for details on the specific protocol implementations. Some plugins will allow configurable deep packet inspection from the yafDPIRules.conf file, such as DNP 3.0, Ethernet/IP, and SCADA. See below for specific information on these particular protocols.</p>
+
+<p>In order to perform DPI on DNSSEC resource records, add &quot;DNSSEC&quot; to the <b>--plugin-opts</b> option:</p>
+
+<ul>
+
+<p><code>--plugin-opts=DNSSEC</code></p>
+
+<p><code>--plugin-opts=&quot;DNSSEC 53&quot;</code></p>
+
+</ul>
+
+<h1 id="DPI-CONFIG-FILE-FORMAT">DPI CONFIG FILE FORMAT</h1>
+
+<p>The yafDPIRules.conf file should be in the same location as the yafApplabelRules.conf file. The file follows a similar format to yafApplabelRules.conf. The file is a list of label, element pair statements. A label statement begins with the keyword &#39;label&#39;, and has the following form:</p>
+
+<ul>
+
+<p>label &lt;N&gt; element &lt;N2&gt; &lt;element-rule&gt;</p>
+
+</ul>
+
+<p>where &lt;N&gt; is the application label (usually the well-known port) found in the yafApplabelRules.conf file (an unsigned 16-bit decimal integer in the range 0 to 65535), &lt;N2&gt; is the Information Element ID found in the <i>/usr/local/yaf/CERT_IE.h</i> and below, and &lt;element-rule&gt; is a PCRE regular expression and will be stored and associated with the ID number preceding it. There can be multiple lines for a single application label, however each should have a different &lt;N2&gt;. There should be parentheses around the substring you want to capture and store. If there is more than 1 set of parentheses in the regular expression, the most outer set is the substring captured. (See PCRE documentation for details on regular expressions and substring matching.)</p>
+
+<h3 id="User-Defined-Elements">User Defined Elements</h3>
+
+<p>To define your own information elements, use the following form:</p>
+
+<ul>
+
+<p>label &lt;N&gt; user &lt;E&gt; name &lt;element-name&gt; &lt;element-rule&gt;</p>
+
+</ul>
+
+<p>where &lt;N&gt; is the application label found in yafApplabelRules.conf file. &lt;E&gt; is the Information Element ID in the range of 0 to 65535 to be given to the element upon export. This number should be unique to this file and should NOT be defined in <i>/usr/local/yaf/CERT_IE.h</i>. This element will be added to the template upon processing of this file, and must be added to the <b>yaf</b> collecting process in order to properly decode the IPFIX message. &lt;element-name&gt; is the name you want to give to this IPFIX Information Element. This name can consist of letters and numbers and underscores; it can not contain special characters or spaces. &lt;label-rule&gt; is the PCRE regular expression and will be stored and associated with the Information Element ID and name preceding it. There is a limit of 30 additional fields per protocol that YAF will store and execute. To find out if <b>yaf</b> accepted your elements, run <b>yaf</b> with --verbose. All user elements will be exported using the CERT Private Enterprise Number (PEN) 6871. ONLY user labels for protocols FTP, HTTP, IMAP, SMTP, RTSP, SSH, and SIP will be added. Elements will be added to the template in the order they are listed in the yafDPIRules.conf file in the form of an fbBasicList_t. By default, HTTP exports 20 basicLists, FTP exports 5 basicLists, IMAP exports 7 basicLists, RTSP exports 12 basicLists, SIP exports 7 basicLists, SMTP exports 11 basicLists, and 1 basicList is exported for SSH.</p>
+
+<p>A &quot;#&quot; smybol starts a comment for the entire line. If a rule is not properly formatted, all subsequent rules may not be processed. It is acceptable to comment out any <b>yaf</b> DPI rules. <b>yaf</b> rules commented out will not be executed against the payload but they will still exist in the template and record. User-defined information elements are added based on the configuration file at run time.</p>
+
+<p>Optionally, this file may contain two limit statements to configure the DPI plugin. A limit statement begins with the keyword &#39;limit&#39;, and has the following form:</p>
+
+<ul>
+
+<p>limit [field|total] &lt;limit-value&gt;</p>
+
+</ul>
+
+<p>If the &quot;field&quot; label is present, the &lt;limit-value&gt; will be the number of bytes <b>yaf</b> will export for any given field in this file. This does not affect the DNS Deep Packet Inspection or SSL Certificate Capture. FOr DNS, a domain name can have a maximum of 255 characters, so the limit is not configurable.</p>
+
+<p>If the &quot;total&quot; field is present, the &lt;limit-value&gt; will be the total number of bytes <b>yaf</b> may export from the DPI plugin. Obviously, this number will not be larger than the --max-payload value <b>yaf</b> is given at run time.</p>
+
+<p>Both the field and total limits have a maximum value of 65535. If they are larger, they will revert back to the defaults of 200 for per-field limit and 1000 for total limit.</p>
+
+<p>There are also 2 configuration parameters related to SSL export. By default, <b>yaf</b> parses the X.509 certificates and exports the information described below under SSL/TLS. If the following line is present:</p>
+
+<ul>
+
+<p>cert_export_enabled = 1</p>
+
+</ul>
+
+<p><b>yaf</b> will export the full X.509 certificate in the format described below under Full Certificate Export. Setting this variable to 1 disables the traditional SSL certificate decode and export. If the second configuration variable is present:</p>
+
+<ul>
+
+<p>cert_hash_enabled = 1</p>
+
+</ul>
+
+<p><b>yaf</b> will export the hash of the X.509 certificate as found in the certificate. This is typically the SHA-256 hash of the binary certificate but it can vary on the hashing algorithm used. The hashing algorithm can be identified by the sslCertSignature field. If both cert_export_enabled and cert_hash_enabled are set to 1, <b>yaf</b> will export both the full X.509 certificate and perform the traditional decode of the X.509 certificate. It is not recommended to do both. If cert_export_enabled is set to 1, <b>super_mediator</b> can perform the extraction of relevant fields as is done by <b>yaf</b>, plus it provides the option to perform SHA-1 or MD5 hashes of the certificate.</p>
+
+<h1 id="DPI-in-Action">DPI in Action</h1>
+
+<p>Upon <b>yaf</b> startup and capture, you will be able to see if the rule files and their regular expressions were accepted using the <b>--verbose</b> flag.</p>
+
+<ul>
+
+<p>[2013-05-03 19:39:25] DPI Running for ALL Protocols</p>
+
+<p>[2013-05-03 19:39:25] Reading packets from packets.pcap</p>
+
+<p>[2013-05-03 19:39:25] Initializing Rules from DPI File /usr/local/etc/yafDPIRules.conf</p>
+
+<p>[2013-05-03 19:39:25] DPI rule scanner accepted 63 rules from the DPI Rule File</p>
+
+</ul>
+
+<p>An unacceptable regular expression will be brought to your attention with the above statements. If you choose certain protocols for inspection using the <code>--plugin-opts</code> flag, only the appropriate rule statements will be loaded into the DPI Rule Scanner.</p>
+
+<h1 id="Configure-Options">Configure Options</h1>
+
+<p>The following options can be given to ./configure when <b>yaf</b> is built to export DNS authoritative and NXDomain Responses only.</p>
+
+<dl>
+
+<dt id="enable-exportDNSAuth"><b>--enable-exportDNSAuth</b></dt>
+<dd>
+
+<p>Enable export of DNS Authoritative Responses only. The default is to capture and export all DNS Responses. This flag can be used in conjunction with <b>--enable-exportDNSNXDomain.</b> It is only recognized if <b>--plugin-name</b> is set to the DPI plugin, application labeling is enabled, and <b>--max-payload</b> is set.</p>
+
+</dd>
+<dt id="enable-exportDNSNXDomain"><b>--enable-exportDNSNXDomain</b></dt>
+<dd>
+
+<p>Enable export of DNS NXDomain Responses only. The default is to capture and export all DNS Responses. This flag can be used in conjunction with <b>--enable-exportDNSAuth</b>. It is only recognized if <b>--plugin-name</b> is set to the DPI plugin, application labeling is enabled, and <b>--max-payload</b> is set.</p>
+
+</dd>
+</dl>
+
+<h1 id="DPI-Data-Export">DPI Data Export</h1>
+
+<h2 id="DPI-Templates-Information-Elements-by-Protocol">DPI Templates &amp; Information Elements by Protocol</h2>
+
+<p><b>yaf</b>&#39;s output consists of an IPFIX message stream. <b>yaf</b> uses a variety of templates for IPFIX data records; As of <b>yaf</b> 2.0, <b>yaf</b> uses a subTemplateMultiList to export optional information elements, such as Deep Packet Inspection fields, relating to the flow. Below are templates that may appear in this subTemplateMultiList depending on the application label of the flow. For more information on <b>yaf</b> information elements see <b>yaf(1)</b>. For more information on IPFIX Structured lists, see the Internet Draft, Export of Structured Data in IPFIX, &lt;RFC 6313&gt;. Most of the elements are exported as a basicList. An IPFIX basicList represents a list of zero or more instances of any Information Element (IE 291).</p>
+
+<h2 id="FTP">FTP</h2>
+
+<p>File Transfer Protocol (FTP) Deep Packet Inspection is based on RFC 959. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order they are listed in the yafDPIRules.conf file. YAF will always export at least 5 basicLists for FTP, even if not all of the following are enabled. By default, they will be in the following order:</p>
+
+<dl>
+
+<dt id="ftpReturn-CERT-PEN-6871-IE-131-variable-length-DPI-basicList"><b>ftpReturn</b> CERT (PEN 6871) IE 131, variable length, DPI basicList</dt>
+<dd>
+
+<p>FTP Commands or Replies.</p>
+
+</dd>
+<dt id="ftpUser-CERT-PEN-6871-IE-132-variable-length-DPI-basicList"><b>ftpUser</b> CERT (PEN 6871) IE 132, variable length, DPI basicList</dt>
+<dd>
+
+<p>FTP User Command Argument. This command will normally be the first command transmitted by the user.</p>
+
+</dd>
+<dt id="ftpPass-CERT-PEN-6871-IE-133-variable-length-DPI-basicList"><b>ftpPass</b> CERT (PEN 6871) IE 133, variable length, DPI basicList</dt>
+<dd>
+
+<p>FTP Password Command Argument. This command must be preceded by the user name command, and is usually required to complete authentication.</p>
+
+</dd>
+<dt id="ftpType-CERT-PEN-6871-IE-134-variable-length-DPI-basicList"><b>ftpType</b> CERT (PEN 6871) IE 134, variable length, DPI basicList</dt>
+<dd>
+
+<p>FTP Data Representation Type.</p>
+
+</dd>
+<dt id="ftpRespCode-CERT-PEN-6871-IE-135-variable-length-DPI-basicList"><b>ftpRespCode</b> CERT (PEN 6871) IE 135, variable length, DPI basicList</dt>
+<dd>
+
+<p>FTP Reply. This consists of a three digit number followed by some text.</p>
+
+</dd>
+</dl>
+
+<h2 id="HTTP">HTTP</h2>
+
+<p>HTTP Deep Packet Inspection is based on RFC 2616. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order they are listed in the yafDPIRules.conf file. Some elements are not enabled by default. The template will always contain at least 20 information elements even if less elements are enabled in the configuration file. By default, the following 20 information elements are exported in the following order:</p>
+
+<dl>
+
+<dt id="httpServerString-CERT-PEN-6871-IE-110-variable-length-DPI-basicList"><b>httpServerString</b> CERT (PEN 6871) IE 110, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Server Response-header field. Contains information about the software used to handle the HTTP Request.</p>
+
+</dd>
+<dt id="httpUserAgent-CERT-PEN-6871-IE-111-variable-length-DPI-basicList"><b>httpUserAgent</b> CERT (PEN 6871) IE 111, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP User-Agent Request-header field. Contains information about the user agent originating the request.</p>
+
+</dd>
+<dt id="httpGet-CERT-PEN-6871-IE-112-variable-length-DPI-basicList"><b>httpGet</b> CERT (PEN 6871) IE 112, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Method Command. Retrieves information identified by the following Request-URI.</p>
+
+</dd>
+<dt id="httpConnection-CERT-PEN-6871-IE-113-variable-length-DPI-basicList"><b>httpConnection</b> CERT (PEN 6871) IE 113, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Connection header fields. Contains options that are desired for a particular connection.</p>
+
+</dd>
+<dt id="httpReferer-CERT-PEN-6871-IE-115-variable-length-DPI-basicList"><b>httpReferer</b> CERT (PEN 6871) IE 115, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Referer request-header field. Address (URI) of the resource which the Request-URI was obtained.</p>
+
+</dd>
+<dt id="httpLocation-CERT-PEN-6871-IE-116-variable-length-DPI-basicList"><b>httpLocation</b> CERT (PEN 6871) IE 116, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Location response-header field. Used to redirect the recipient to a location to complete a request or identify a new resource.</p>
+
+</dd>
+<dt id="httpHost-CERT-PEN-6871-IE-117-variable-length-DPI-basicList"><b>httpHost</b> CERT (PEN 6871) IE 117, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Host Request-header. The Internet host and port number of the resource being requested.</p>
+
+</dd>
+<dt id="httpContentLength-CERT-PEN-6871-IE-118-variable-length-DPI-basicList"><b>httpContentLength</b> CERT (PEN 6871) IE 118, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Content-Length header. Indicates the size of the entity-body.</p>
+
+</dd>
+<dt id="httpAge-CERT-PEN-6871-IE-119-variable-length-DPI-basicList"><b>httpAge</b> CERT (PEN 6871) IE 119, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Age response-header. Argument is the sender&#39;s estimate of the time elapsed since the response.</p>
+
+</dd>
+<dt id="httpResponse-CERT-PEN-6871-IE-123-variable-length-DPI-basicList"><b>httpResponse</b> CERT (PEN 6871) IE 123, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Response Status Code. Usually a three-digit number followed by text.</p>
+
+</dd>
+<dt id="httpAcceptLanguage-CERT-PEN-6871-IE-121-variable-length-DPI-basicList"><b>httpAcceptLanguage</b> CERT (PEN 6871) IE 121, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Accept-Language Request-Header field. Restricts the set of natural languages that preferred.</p>
+
+</dd>
+<dt id="httpAccept-CERT-PEN-6871-IE-120-variable-length-DPI-basicList"><b>httpAccept</b> CERT (PEN 6871) IE 120, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Accept request-header field. Used to specify certain media types that are acceptable for the response.</p>
+
+</dd>
+<dt id="httpContentType-CERT-PEN-6871-IE-122-variable-length-DPI-basicList"><b>httpContentType</b> CERT (PEN 6871) IE 122, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Content Type entity-header field. Indicates the media type of the entity-body.</p>
+
+</dd>
+<dt id="httpVersion-CERT-PEN-6871-IE-114-variable-length-DPI-basicList"><b>httpVersion</b> CERT (PEN 6871) IE 114, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Version Number.</p>
+
+</dd>
+<dt id="httpCookie-CERT-PEN-6871-IE-220-variable-length-DPI-basicList"><b>httpCookie</b> CERT (PEN 6871) IE 220, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Cookie Header Field.</p>
+
+</dd>
+<dt id="httpSetCookie-CERT-PEN-6871-IE-221-variable-length-DPI-basicList"><b>httpSetCookie</b> CERT (PEN 6871) IE 221, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Set Cookie Header Field.</p>
+
+</dd>
+<dt id="httpAuthorization-CERT-PEN-6871-IE-252-variable-length-DPI-basicList"><b>httpAuthorization</b> CERT (PEN 6871) IE 252, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Authorization Header Field.</p>
+
+</dd>
+<dt id="httpVia-CERT-PEN-6871-IE-253-variable-length-DPI-basicList"><b>httpVia</b> CERT (PEN 6871) IE 253, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Via Header Field.</p>
+
+</dd>
+<dt id="httpX-Forwarded-For-CERT-PEN-6871-IE-254-variable-length-DPI-basicList"><b>httpX-Forwarded-For</b> CERT (PEN 6871) IE 254, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Forwarded-For Header Field.</p>
+
+</dd>
+<dt id="httpRefresh-CERT-PEN-6871-IE-256-variable-length-DPI-basicList"><b>httpRefresh</b> CERT (PEN 6871) IE 256, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Refresh Header Field.</p>
+
+</dd>
+</dl>
+
+<h3 id="Optional-HTTP-Elements">Optional HTTP Elements</h3>
+
+<p>The following information elements are defined but not enabled by default. To enable any of the following fields, uncomment the line in the yafDPIRules.conf file.</p>
+
+<dl>
+
+<dt id="httpExpires-CERT-PEN-6871-IE-255-variable-length-DPI-basicList"><b>httpExpires</b> CERT (PEN 6871) IE 255, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Expires Header Field.</p>
+
+</dd>
+<dt id="httpIMEI-CERT-PEN-6871-IE-257-variable-length-DPI-basicList"><b>httpIMEI</b> CERT (PEN 6871) IE 257, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP International Mobile Station Equipment Identity ID.</p>
+
+</dd>
+<dt id="httpIMSI-CERT-PEN-6871-IE-258-variable-length-DPI-basicList"><b>httpIMSI</b> CERT (PEN 6871) IE 258, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP International Mobile Subscriber Identity</p>
+
+</dd>
+<dt id="httpMSISDN-CERT-PEN-6871-IE-259-variable-length-DPI-basicList"><b>httpMSISDN</b> CERT (PEN 6871) IE 259, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP MSISDN number, a telephone number for the SIM card in a mobile/cellular phone.</p>
+
+</dd>
+<dt id="httpSubscriber-CERT-PEN-6871-IE-260-variable-length-DPI-basicList"><b>httpSubscriber</b> CERT (PEN 6871) IE 260, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Mobile Subscriber Information</p>
+
+</dd>
+<dt id="httpAcceptCharset-CERT-PEN-6871-IE-261-variable-length-DPI-basicList"><b>httpAcceptCharset</b> CERT (PEN 6871) IE 261, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Accept Charset Header Field.</p>
+
+</dd>
+<dt id="httpAllow-CERT-PEN-6871-IE-262-variable-length-DPI-basicList"><b>httpAllow</b> CERT (PEN 6871) IE 262, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Accept Encoding Header Field.</p>
+
+</dd>
+<dt id="httpDate-CERT-PEN-6871-IE-263-variable-length-DPI-basicList"><b>httpDate</b> CERT (PEN 6871) IE 263, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Date Header Field.</p>
+
+</dd>
+<dt id="httpExpect-CERT-PEN-6871-IE-265-variable-length-DPI-basicList"><b>httpExpect</b> CERT (PEN 6871) IE 265, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Expect Header Field.</p>
+
+</dd>
+<dt id="httpFrom-CERT-PEN-6871-IE-266-variable-length-DPI-basicList"><b>httpFrom</b> CERT (PEN 6871) IE 266, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP From Header Field.</p>
+
+</dd>
+<dt id="httpProxyAuthentication-CERT-PEN-6871-IE-267-variable-length-DPI-basicList"><b>httpProxyAuthentication</b> CERT (PEN 6871) IE 267, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Proxy Authentication Field.</p>
+
+</dd>
+<dt id="httpUpgrade-CERT-PEN-6871-IE-268-variable-length-DPI-basicList"><b>httpUpgrade</b> CERT (PEN 6871) IE 268, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Upgrade Header Field.</p>
+
+</dd>
+<dt id="httpWarning-CERT-PEN-6871-IE-269-variable-length-DPI-basicList"><b>httpWarning</b> CERT (PEN 6871) IE 269, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Warning Header Field.</p>
+
+</dd>
+<dt id="httpDNT-CERT-PEN-6871-IE-270-variable-length-DPI-basicList"><b>httpDNT</b> CERT (PEN 6871) IE 270, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP DNT Header Field.</p>
+
+</dd>
+<dt id="httpX-Forwarded-Proto-CERT-PEN-6871-IE-271-variable-length-DPI-basicList"><b>httpX-Forwarded-Proto</b> CERT (PEN 6871) IE 271, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Forwarded-Proto Header Field.</p>
+
+</dd>
+<dt id="httpX-Forwarded-Host-CERT-PEN-6871-IE-272-variable-length-DPI-basicList"><b>httpX-Forwarded-Host</b> CERT (PEN 6871) IE 272, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Forwarded-Host Header Field.</p>
+
+</dd>
+<dt id="httpX-Forwarded-Server-CERT-PEN-6871-IE-273-variable-length-DPI-basicList"><b>httpX-Forwarded-Server</b> CERT (PEN 6871) IE 273, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Forwarded-Server Header Field.</p>
+
+</dd>
+<dt id="httpX-DeviceID-CERT-PEN-6871-IE-274-variable-length-DPI-basicList"><b>httpX-DeviceID</b> CERT (PEN 6871) IE 274, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Device ID Header Field.</p>
+
+</dd>
+<dt id="httpX-Profile-CERT-PEN-6871-IE-275-variable-length-DPI-basicList"><b>httpX-Profile</b> CERT (PEN 6871) IE 275, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-Profile Header Field.</p>
+
+</dd>
+<dt id="httpLastModified-CERT-PEN-6871-IE-276-variable-length-DPI-basicList"><b>httpLastModified</b> CERT (PEN 6871) IE 276, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Last Modified Header Field.</p>
+
+</dd>
+<dt id="httpContentEncoding-CERT-PEN-6871-IE-277-variable-length-DPI-basicList"><b>httpContentEncoding</b> CERT (PEN 6871) IE 277, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Content Encoding Header Field.</p>
+
+</dd>
+<dt id="httpContentLanguage-CERT-PEN-6871-IE-278-variable-length-DPI-basicList"><b>httpContentLanguage</b> CERT (PEN 6871) IE 278, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Content Language Header Field.</p>
+
+</dd>
+<dt id="httpContentLocation-CERT-PEN-6871-IE-279-variable-length-DPI-basicList"><b>httpContentLocation</b> CERT (PEN 6871) IE 279, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP Content Location Header Field.</p>
+
+</dd>
+<dt id="httpX-UA-Compatible-CERT-PEN-6871-IE-280-variable-length-DPI-basicList"><b>httpX-UA-Compatible</b> CERT (PEN 6871) IE 280, variable length, DPI basicList</dt>
+<dd>
+
+<p>HTTP X-UA-Compatible Header Field.</p>
+
+</dd>
+</dl>
+
+<h2 id="IMAP"><b>IMAP</b></h2>
+
+<p>IMAP Deep Packet Inspection is based on RFC 3501. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order they are listed in the yafDPIRules.conf file. <b>yaf</b> will always export at least 7 fields in the IMAP template and data record. By default, <b>yaf</b> exports the following fields in order:</p>
+
+<dl>
+
+<dt id="imapCapability-CERT-PEN-6871-IE-136-variable-length-DPI-basicList"><b>imapCapability</b> CERT (PEN 6871) IE 136, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP Capability Command and Response. Captures the listing of capabilities that the server supports.</p>
+
+</dd>
+<dt id="imapLogin-CERT-PEN-6871-IE-137-variable-length-DPI-basicList"><b>imapLogin</b> CERT (PEN 6871) IE 137, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP Login Command. Arguments are user name and password.</p>
+
+</dd>
+<dt id="imapStartTLS-CERT-PEN-6871-IE-138-variable-length-DPI-basicList"><b>imapStartTLS</b> CERT (PEN 6871) IE 138, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP STARTTLS Command. Captures this command only as no arguments or responses are related.</p>
+
+</dd>
+<dt id="imapAuthenticate-CERT-PEN-6871-IE-139-variable-length-DPI-basicList"><b>imapAuthenticate</b> CERT (PEN 6871) IE 139, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP Authenticate Command. Captures the authentication mechanism name of the server following this command.</p>
+
+</dd>
+<dt id="imapCommand-CERT-PEN-6871-IE-140-variable-length-DPI-basicList"><b>imapCommand</b> CERT (PEN 6871) IE 140, variable length, DPI basicList</dt>
+<dd>
+
+<p>Captures a variety of IMAP Commands and their arguments.</p>
+
+</dd>
+<dt id="imapExists-CERT-PEN-6871-IE-141-variable-length-DPI-basicList"><b>imapExists</b> CERT (PEN 6871) IE 141, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP Exists Response. Reports the number of messages in the mailbox.</p>
+
+</dd>
+<dt id="imapRecent-CERT-PEN-6871-IE-142-variable-length-DPI-basicList"><b>imapRecent</b> CERT (PEN 6871) IE 142, variable length, DPI basicList</dt>
+<dd>
+
+<p>IMAP Recent Response. Reports the number of message with the Recent flag set.</p>
+
+</dd>
+</dl>
+
+<h2 id="RTSP">RTSP</h2>
+
+<p>Real Time Streaming Protocol (RTSP) Deep Packet Inspection is based on RFC 2326. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order they are listed in the yafDPIRules.conf file. <b>yaf</b> will always export at least 12 information elements in the RTSP template and data record. By default, the following information elements are exported in order:</p>
+
+<dl>
+
+<dt id="rtspURL-CERT-PEN-6871-IE-143-variable-length-DPI-basicList"><b>rtspURL</b> CERT (PEN 6871) IE 143, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP URL. Captures the address of the network resources requested.</p>
+
+</dd>
+<dt id="rtspVersion-CERT-PEN-6871-IE-144-variable-length-DPI-basicList"><b>rtspVersion</b> CERT (PEN 6871) IE 144, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Version Number.</p>
+
+</dd>
+<dt id="rtspReturnCode-CERT-PEN-6871-IE-145-variable-length-DPI-basicList"><b>rtspReturnCode</b> CERT (PEN 6871) IE 145, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Status-Line. Captures the RTSP Protocol version, numeric status code, and the textual phrase associated with the numeric code.</p>
+
+</dd>
+<dt id="rtspContentLength-CERT-PEN-6871-IE-146-variable-length-DPI-basicList"><b>rtspContentLength</b> CERT (PEN 6871) IE 146, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Content-Length Header Field. Contains the length of the content of the method.</p>
+
+</dd>
+<dt id="rtspCommand-CERT-PEN-6871-IE-147-variable-length-DPI-basicList"><b>rtspCommand</b> CERT (PEN 6871) IE 147, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Command. Captures the method to be performed and the Request-URI associated with the method.</p>
+
+</dd>
+<dt id="rtspContentType-CERT-PEN-6871-IE-148-variable-length-DPI-basicList"><b>rtspContentType</b> CERT (PEN 6871) IE 148, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Content Type.</p>
+
+</dd>
+<dt id="rtspTransport-CERT-PEN-6871-IE-149-variable-length-DPI-basicList"><b>rtspTransport</b> CERT (PEN 6871) IE 149, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Transport request header field. Captures the transport protocol used and the parameters that follow.</p>
+
+</dd>
+<dt id="rtspCSeq-CERT-PEN-6871-IE-150-variable-length-DPI-basicList"><b>rtspCSeq</b> CERT (PEN 6871) IE 150, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP CSeq field. Contains the sequence number for an RTSP request-response pair.</p>
+
+</dd>
+<dt id="rtspLocation-CERT-PEN-6871-IE-151-variable-length-DPI-basicList"><b>rtspLocation</b> CERT (PEN 6871)IE 151, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Location header field.</p>
+
+</dd>
+<dt id="rtspPacketsReceived-CERT-PEN-6871-IE-152-variable-length-DPI-basicList"><b>rtspPacketsReceived</b> CERT (PEN 6871) IE 152, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Packets Received header field.</p>
+
+</dd>
+<dt id="rtspUserAgent-CERT-PEN-6871-IE-153-variable-length-DPI-basicList"><b>rtspUserAgent</b> CERT (PEN 6871) IE 153, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP User Agent field. Contains information about the user agent originating the request.</p>
+
+</dd>
+<dt id="rtspJitter-CERT-PEN-6871-IE-154-variable-length-DPI-basicList"><b>rtspJitter</b> CERT (PEN 6871) IE 154, variable length, DPI basicList</dt>
+<dd>
+
+<p>RTSP Jitter Value.</p>
+
+</dd>
+</dl>
+
+<h2 id="SIP">SIP</h2>
+
+<p>Session Initiation Protocol (SIP) Deep Packet Inspection is based on RFC 3261. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order listed in yafDPIRules.conf. <b>yaf</b> will always export at least 7 information elements in the SIP template and data record. By default, the following information elements are exported in order:</p>
+
+<dl>
+
+<dt id="sipInvite-CERT-PEN-6871-IE-155-variable-length-DPI-basicList"><b>sipInvite</b> CERT (PEN 6871) IE 155, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Invite Method. Contains the SIP address and SIP Version Number.</p>
+
+</dd>
+<dt id="sipCommand-CERT-PEN-6871-IE-156-variable-length-DPI-basicList"><b>sipCommand</b> CERT (PEN 6871) IE 156, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Command. Contains a SIP Method, SIP address, and SIP Version Number.</p>
+
+</dd>
+<dt id="sipVia-CERT-PEN-6871-IE-157-variable-length-DPI-basicList"><b>sipVia</b> CERT (PEN 6871) IE 157, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Via contains the SIP Version Number and the address the sender is expecting to receive responses.</p>
+
+</dd>
+<dt id="sipMaxForwards-CERT-PEN-6871-IE-158-variable-length-DPI-basicList"><b>sipMaxForwards</b> CERT (PEN 6871) IE 158, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Max Forwards contains the limit of number of hops a request can make on the way to its destination.</p>
+
+</dd>
+<dt id="sipAddress-CERT-PEN-6871-IE-159-variable-length-DPI-basicList"><b>sipAddress</b> CERT (PEN 6871) IE 159, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Address contains the argument of the To, From, or Contact Header Fields.</p>
+
+</dd>
+<dt id="sipContentLength-CERT-PEN-6871-IE-160-variable-length-DPI-basicList"><b>sipContentLength</b> CERT (PEN 6871) IE 160, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP Content Length header field. Contains the byte count of the message byte.</p>
+
+</dd>
+<dt id="sipUserAgent-CERT-PEN-6871-IE-161-variable-length-DPI-basicList"><b>sipUserAgent</b> CERT (PEN 6871) IE 161, variable length, DPI basicList</dt>
+<dd>
+
+<p>SIP User Agent Header Field. Contains information about the User Agent Client originating the request.</p>
+
+</dd>
+</dl>
+
+<h2 id="SMTP">SMTP</h2>
+
+<p>Simple Mail Transfer Protocol (SMTP) Deep Packet Inspection is based on RFC 2821. The following information elements are exported as a template in the subTemplateMultiList as basicLists of variable length elements in the order they are listed in the yafDPIRules.conf file. <b>yaf</b> will always export at least 11 information elements in the SMTP template and data record. By default, the following information elements are exported in order:</p>
+
+<dl>
+
+<dt id="smtpHello-CERT-PEN-6871-IE-162-variable-length-DPI-basicList"><b>smtpHello</b> CERT (PEN 6871) IE 162, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Hello or Extend Hello command. Captures the command and the domain name of the SMTP client.</p>
+
+</dd>
+<dt id="smtpFrom-CERT-PEN-6871-IE-163-variable-length-DPI-basicList"><b>smtpFrom</b> CERT (PEN 6871) IE 163, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Mail Command. Contains the reverse-path of the sender mailbox.</p>
+
+</dd>
+<dt id="smtpTo-CERT-PEN-6871-IE-164-variable-length-DPI-basicList"><b>smtpTo</b> CERT (PEN 6871) IE 164, variable length, DPI basicList</dt>
+<dd>
+
+<p>The SMTP Recipient (RCPT) Command. Captures the command and the forward-path of the recipient of the mail data.</p>
+
+</dd>
+<dt id="smtpContentType-CERT-PEN-6871-IE-165-variable-length-DPI-basicList"><b>smtpContentType</b> CERT (PEN 6871) IE 165, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Content Type Header Field.</p>
+
+</dd>
+<dt id="smtpSubject-CERT-PEN-6871-IE-166-variable-length-DPI-basicList"><b>smtpSubject</b> CERT (PEN 6871) IE 166, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Subject. Contains the subject of the mail data.</p>
+
+</dd>
+<dt id="smtpFilename-CERT-PEN-6871-IE-167-variable-length-DPI-basicList"><b>smtpFilename</b> CERT (PEN 6871) IE 167, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Filename. Contains the name of the file attached to the mail message.</p>
+
+</dd>
+<dt id="smtpContentDisposition-CERT-PEN-6871-IE-168-variable-length-DPI-basicList"><b>smtpContentDisposition</b> CERT (PEN 6871) IE 168, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Content-Disposition Header field.</p>
+
+</dd>
+<dt id="smtpResponse-CERT-PEN-6871-IE-169-variable-length-DPI-basicList"><b>smtpResponse</b> CERT (PEN 6871) IE 169, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Replies. Consists of a three digit number followed by text.</p>
+
+</dd>
+<dt id="smtpEnhanced-CERT-PEN-6871-IE-170-variable-length-DPI-basicList"><b>smtpEnhanced</b> CERT (PEN 6871) IE 170, variable length, DPI basicList</dt>
+<dd>
+
+<p>Enhanced SMTP. Contains the ESMTP command with the following argument.</p>
+
+</dd>
+<dt id="smtpSize-CERT-PEN-6871-IE-222-variable-length-DPI-basicList"><b>smtpSize</b> CERT (PEN 6871) IE 222, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Size Header Field. Contains the size in bytes of the mail data.</p>
+
+</dd>
+<dt id="smtpDate-CERT-PEN-6871-IE-251-variable-length-DPI-basicList"><b>smtpDate</b> CERT (PEN 6871) IE 251, variable length, DPI basicList</dt>
+<dd>
+
+<p>SMTP Date Field. Added in version 2.3.</p>
+
+</dd>
+</dl>
+
+<h2 id="SSH">SSH</h2>
+
+<p>By default, <b>yaf</b> only exports 1 information element in the SSH template and data record.</p>
+
+<dl>
+
+<dt id="sshVersion-CERT-PEN-6871-IE-171-variable-length-DPI-basicList"><b>sshVersion</b> CERT (PEN 6871) IE 171, variable length, DPI basicList</dt>
+<dd>
+
+<p>SSH Version Number</p>
+
+</dd>
+</dl>
+
+<h2 id="DNS">DNS</h2>
+
+<p>Domain Name System (DNS) Deep Packet Inspection is based on RFC 1035. DNS Information is exported in the <b>yaf</b> subTemplateMultiList as a subTemplateList of Resource Record Templates. Each resource record entry contains generic resource record information such as type, TTL, and name. There is also one element (subTemplateList) that contains resource record specific information based on the type of resource record (A Record vs NS Record, for example). The subTemplateList will contain one entry for each resource record in the packet. Due to alignment issues, the resource record specific element is the first element in the template and is therefore the first item listed below. DNSSEC information is not exported by default. To export DNSSEC information, run <b>yaf</b> with <b>--plugin-opts=DNSSEC</b>. The following information elements exist in the DNS resource record subTemplateList:</p>
+
+<h3 id="DNS-Resource-Record">DNS Resource Record</h3>
+
+<p>The following elements (in order) are contained in the DNS Resource Record Template.</p>
+
+<dl>
+
+<dt id="subTemplateList-IE-292-variable-length"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>An IPFIX subTemplateList. This list contains a &quot;DNS Resource Record Type&quot; Template. The type of this template depends on the type (<b>dnsQRType</b>) of resource record. See the DNS Resource Record Types listed below.</p>
+
+</dd>
+<dt id="dnsQName-CERT-PEN-6871-IE-179-variable-length"><b>dnsQName</b> CERT (PEN 6871) IE 179, variable length</dt>
+<dd>
+
+<p>A DNS Query or Response Name. This field corresponds with the QNAME field in the DNS Question Section or the NAME field in the DNS Resource Record Section.</p>
+
+</dd>
+<dt id="dnsTTL-CERT-PEN-6871-IE-199-4-octets-unsigned"><b>dnsTTL</b> CERT (PEN 6871) IE 199, 4 octets, unsigned</dt>
+<dd>
+
+<p>DNS Time To Live. This is an unsigned integer that specifies the time interval, in seconds, that the resource record may be cached for. This will contain a value of zero for DNS Queries.</p>
+
+</dd>
+<dt id="dnsQRType-CERT-PEN-6871-IE-175-2-octets-unsigned"><b>dnsQRType</b> CERT (PEN 6871) IE 175, 2 octets, unsigned</dt>
+<dd>
+
+<p>DNS Query/Response Type. This corresponds with the QTYPE field in the DNS Question Section or the TYPE field in the DNS Resource Record Section. This field determines the type of subTemplateList found in this record.</p>
+
+</dd>
+<dt id="dnsQueryResponse-CERT-PEN-6871-IE-174-1-octet-unsigned"><b>dnsQueryResponse</b> CERT (PEN 6871) IE 174, 1 octet, unsigned</dt>
+<dd>
+
+<p>DNS Query/Response header field. This corresponds with the DNS header one bit field, QR. If the message is a query (0), or a response (1).</p>
+
+</dd>
+<dt id="dnsAuthoritative-CERT-PEN-6871-IE-176-1-octet-unsigned"><b>dnsAuthoritative</b> CERT (PEN 6871) IE 176, 1 octet, unsigned</dt>
+<dd>
+
+<p>DNS Authoritative header field. This corresponds with the DNS header one bit field, AA. This bit is only valid in responses (when <b>dnsQueryResponse</b> is 1), and specifies that the responding name server is an authority for the domain name in the question section.</p>
+
+</dd>
+<dt id="dnsNXDomain-CERT-PEN-6871-IE-177-1-octet-unsigned"><b>dnsNXDomain</b> CERT (PEN 6871) IE 177, 1 octet, unsigned</dt>
+<dd>
+
+<p>DNS NXDomain or Response Code (RCODE). This corresponds with the DNS RCODE header field. This field will be set to 3 for a Name Error, 2 for a Server Failure, 1 for a Format Error, and 0 for No Error. See http://www.iana.org/assignments/dns-parameters for other valid values.</p>
+
+</dd>
+<dt id="dnsRRSection-CERT-PEN-6871-IE-178-1-octet-unsigned"><b>dnsRRSection</b> CERT (PEN 6871) IE 178, 1 octet, unsigned</dt>
+<dd>
+
+<p>DNS Resource Record Section Field. This field will be set to 0 if the information is from the Question Section, 1 for the Answer Section, 2 for the Name Server Section, and 3 for the Additional Section.</p>
+
+</dd>
+<dt id="dnsID-CERT-PEN-6871-IE-226-2-octets-unsigned"><b>dnsID</b> CERT (PEN 6871) IE 226, 2 octets, unsigned</dt>
+<dd>
+
+<p>DNS Transaction ID. This identifier is used by the requester to match up replies to outstanding queries.</p>
+
+</dd>
+</dl>
+
+<h3 id="DNS-Resource-Record-Types">DNS Resource Record Types</h3>
+
+<ul>
+
+<li><p>DNS A Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is 1 and the A Record contains an IP address.</p>
+
+<dl>
+
+<dt id="sourceIPv4Address-IE-8-4-octets-unsigned"><b>sourceIPv4Address</b> IE 8, 4 octets, unsigned</dt>
+<dd>
+
+<p>IPv4 address of the host.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS NS Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is 2 and the NS Record contains an NSDNAME.</p>
+
+<dl>
+
+<dt id="dnsNSDName-CERT-PEN-6871-IE-183-variable-length"><b>dnsNSDName</b> CERT (PEN 6871) IE 183, variable length</dt>
+<dd>
+
+<p>An authoritative name server domain-name.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS CNAME Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is 5 and the CNAME Record contains an CNAME.</p>
+
+<dl>
+
+<dt id="dnsCName-CERT-PEN-6871-IE-180-variable-length"><b>dnsCName</b> CERT (PEN 6871) IE 180, variable length</dt>
+<dd>
+
+<p>A domain-name which specificies the canonical or primary name for the owner.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS SOA Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is 6 and the SOA Record contains at least 1 of the following elements:</p>
+
+<dl>
+
+<dt id="dnsSOAMName-CERT-PEN-6871-IE-214-variable-length"><b>dnsSOAMName</b> CERT (PEN 6871) IE 214, variable length</dt>
+<dd>
+
+<p>Corresponds to DNS SOA MNAME Field.</p>
+
+</dd>
+<dt id="dnsSOARName-CERT-PEN-6871-IE-215-variable-length"><b>dnsSOARName</b> CERT (PEN 6871) IE 215, variable length</dt>
+<dd>
+
+<p>Corresponds to DNS SOA RNAME Field.</p>
+
+</dd>
+<dt id="dnsSOASerial-CERT-PEN-6871-IE-209-4-octets-unsigned"><b>dnsSOASerial</b> CERT (PEN 6871) IE 209, 4 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to DNS SOA SERIAL Field.</p>
+
+</dd>
+<dt id="dnsSOARefresh-CERT-PEN-6871-IE-210-4-octets-unsigned"><b>dnsSOARefresh</b> CERT (PEN 6871) IE 210, 4 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to DNS SOA REFRESH Field.</p>
+
+</dd>
+<dt id="dnsSOARetry-CERT-PEN-6871-IE-211-4-octets-unsigned"><b>dnsSOARetry</b> CERT (PEN 6871) IE 211, 4 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to DNS SOA RETRY Field.</p>
+
+</dd>
+<dt id="dnsSOAExpire-CERT-PEN-6871-IE-212-4-octets-unsigned"><b>dnsSOAExpire</b> CERT (PEN 6871) IE 212, 4 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to DNS SOA EXPIRE Field.</p>
+
+</dd>
+<dt id="dnsSOAMinimum-CERT-PEN-6871-IE-213-4-octets-unsigned"><b>dnsSOAMinimum</b> CERT (PEN 6871) IE 213, 4 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to DNS SOA MINIMUM Field.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS PTR Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 12 and PTRDNAME exists.</p>
+
+<dl>
+
+<dt id="dnsPTRDName-CERT-PEN-6871-IE-184-variable-length"><b>dnsPTRDName</b> CERT (PEN 6871) IE 184, variable length</dt>
+<dd>
+
+<p>Corresponds to DNS PTR PTRDNAME Field.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS MX Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 15 and MXExchange exists</p>
+
+<dl>
+
+<dt id="dnsMXExchange-CERT-PEN-6871-IE-182-variable-length"><b>dnsMXExchange</b> CERT (PEN 6871) IE 182, variable length</dt>
+<dd>
+
+<p>Corresponds to the DNS MX Exchange field.</p>
+
+</dd>
+<dt id="dnsMXPreference-CERT-PEN-6871-IE-181-2-octets-unsigned"><b>dnsMXPreference</b> CERT (PEN 6871) IE 181, 2 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to the DNS MX Preference field.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS TXT Resource Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 16 and TXT-DATA exists.</p>
+
+<dl>
+
+<dt id="dnsTXTData-CERT-PEN-6871-IE-208-variable-length"><b>dnsTXTData</b> CERT (PEN 6871) IE 208, variable length</dt>
+<dd>
+
+<p>Corresponds to DNS TXT TXT-DATA field.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS AAAA Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 28 and the IPv6 Address exists. See RFC 3596.</p>
+
+<dl>
+
+<dt id="sourceIPv6Address-IE-27-16-octets-unsigned"><b>sourceIPv6Address</b> IE 27, 16 octets, unsigned</dt>
+<dd>
+
+<p>An IPv6 Address found in the data portion of an AAAA Resource Record.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNS SRV Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 33 and at least 1 of the following elements exist. See RFC 2782.</p>
+
+<dl>
+
+<dt id="dnsSRVTarget-CERT-PEN-6871-IE-219-variable-length"><b>dnsSRVTarget</b> CERT (PEN 6871) IE 219, variable length</dt>
+<dd>
+
+<p>Corresponds to the Target Field in the DNS SRV Resource Record.</p>
+
+</dd>
+<dt id="dnsSRVPriority-CERT-PEN-6871-IE-216-2-octets-unsigned"><b>dnsSRVPriority</b> CERT (PEN 6871) IE 216, 2 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to the Priority Field in the DNS SRV Resource Record.</p>
+
+</dd>
+<dt id="dnsSRVWeight-CERT-PEN-6871-IE-217-2-octets-unsigned"><b>dnsSRVWeight</b> CERT (PEN 6871) IE 217, 2 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to the Weight Field in the DNS SRV Resource Record.</p>
+
+</dd>
+<dt id="dnsSRVPort-CERT-PEN-6871-IE-218-2-octets-unsigned"><b>dnsSRVPort</b> CERT (PEN 6871) IE 218, 2 octets, unsigned</dt>
+<dd>
+
+<p>Corresponds to the Port Field in the DNS SRV Resource Record.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNSSEC DNSKEY Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 48 and at least 1 of the following elements exist. See RFC 4034.</p>
+
+<dl>
+
+<dt id="dnsPublicKey-CERT-PEN-6871-IE-232-variable-length"><b>dnsPublicKey</b> CERT (PEN 6871) IE 232, variable length</dt>
+<dd>
+
+<p>DNSSEC uses public key cryptography to sign and authenticate DNS resource record sets. This field holds the public key. The format depends on the algorithm of the key.</p>
+
+</dd>
+<dt id="dnsFlags-CERT-PEN-6871-IE-241-2-octets-unsigned"><b>dnsFlags</b> CERT (PEN 6871) IE 241, 2 octets, unsigned</dt>
+<dd>
+
+<p>The flags field in the DNSKey Resource Record. Certain bits determine if the key is a zone key or should be used for a secure entry point.</p>
+
+</dd>
+<dt id="protocolIdentifier-IE-4-1-octet-unsigned"><b>protocolIdentifier</b> IE 4, 1 octet, unsigned</dt>
+<dd>
+
+<p>The protocol field in the DNSKEY RR. This should be 3 or treated as invalid.</p>
+
+</dd>
+<dt id="dnsAlgorithm-CERT-PEN-6871-IE-227-1-octet-unsigned"><b>dnsAlgorithm</b> CERT (PEN 6871) IE 227, 1 octet, unsigned</dt>
+<dd>
+
+<p>Identifies the public key&#39;s cryptographic algorithm, which determines it&#39;s format.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNSSEC DS Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 43, <b>yaf</b> was enabled to export DNSSEC information, and at least 1 of the following elements exist. See RFC 4034.</p>
+
+<dl>
+
+<dt id="dnsDigest-CERT-PEN-6871-IE-231-variable-length"><b>dnsDigest</b> CERT (PEN 6871) IE 231, variable length</dt>
+<dd>
+
+<p>The digest of the DNSKEY RR.</p>
+
+</dd>
+<dt id="dnsKeyTag-CERT-PEN-6871-IE-228-2-octets-unsigned"><b>dnsKeyTag</b> CERT (PEN 6871) IE 228, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Key Tag field in the DS RR.</p>
+
+</dd>
+<dt id="dnsAlgorithm-CERT-PEN-6871-IE-227-2-octets-unsigned"><b>dnsAlgorithm</b> CERT (PEN 6871) IE 227, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Algorithm number of the DNSKEY RR referred to by the DS Record.</p>
+
+</dd>
+<dt id="dnsDigestType-CERT-PEN-6871-IE-238-1-octet-unsigned"><b>dnsDigestType</b> CERT (PEN 6871) IE 238, 1 octet, unsigned</dt>
+<dd>
+
+<p>The Digest Type field which identifes the algorithm used to construct the digest.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNSSEC NSEC Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 47, <b>yaf</b> was enabled to export DNSSEC information, and the following field exists. See RFC 4034.</p>
+
+<dl>
+
+<dt id="dnsHashData-CERT-PEN-6871-IE-234-variable-length"><b>dnsHashData</b> CERT (PEN 6871) IE 234, variable length</dt>
+<dd>
+
+<p>This item contains the Next Domain Name in the NSEC RR.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNSSEC NSEC3 or NSEC3PARAM Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 50 or 51, <b>yaf</b> was enabled to export DNSSEC information, and at least one of the following fields exists. See RFC 5155.</p>
+
+<dl>
+
+<dt id="dnsSalt-CERT-PEN-6871-IE-233-variable-length"><b>dnsSalt</b> CERT (PEN 6871) IE 233, variable length</dt>
+<dd>
+
+<p>The Salt Field in the DNSSEC NSEC3 or NSEC3PARAM RR.</p>
+
+</dd>
+<dt id="dnsHashData-CERT-PEN-6871-IE-234-variable-length1"><b>dnsHashData</b> CERT (PEN 6871) IE 234, variable length</dt>
+<dd>
+
+<p>The Next Hashed Owner Name in the DNSSEC NSEC3 RR. This will be empty for NSEC3PARAM records.</p>
+
+</dd>
+<dt id="dnsIterations-CERT-PEN-6871-IE-235-2-octets-unsigned"><b>dnsIterations</b> CERT (PEN 6871) IE 235, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Iterations field in the DNSSEC NSEC3 or NSEC3PARAM RR.</p>
+
+</dd>
+<dt id="dnsAlgorithm-CERT-PEN-6871-IE-227-2-octets-unsigned1"><b>dnsAlgorithm</b> CERT (PEN 6871) IE 227, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Hash Algorithm field in the DNSSEC NSEC3 or NSEC3PARAM RR. Values are described in RFC 5155.</p>
+
+</dd>
+</dl>
+
+</li>
+<li><p>DNSSEC RRSIG Record</p>
+
+<p>This entry will exist if <b>dnsQRType</b> is set to 46, <b>yaf</b> was enabled to export DNSSEC information, and at least one of the following fields exists. See RFC 4034.</p>
+
+<dl>
+
+<dt id="dnsSigner-CERT-PEN-6871-IE-229-variable-length"><b>dnsSigner</b> CERT (PEN 6871) IE 229, variable length</dt>
+<dd>
+
+<p>The Signer&#39;s Name field in the RRSIG RR.</p>
+
+</dd>
+<dt id="dnsSignature-CERT-PEN-6871-IE-230-variable-length"><b>dnsSignature</b> CERT (PEN 6871) IE 230, variable length</dt>
+<dd>
+
+<p>The Signature field in the RRSIG RR. Contains the cryptographic signature that covers the <b>dnsQName</b> field.</p>
+
+</dd>
+<dt id="dnsSignatureInception-CERT-PEN-6871-IE-236-4-octets-unsigned"><b>dnsSignatureInception</b> CERT (PEN 6871) IE 236, 4 octets, unsigned</dt>
+<dd>
+
+<p>The Signature Inception field in a RRSIG RR. The Expiration and Inception fields specify a validity period for the signature.</p>
+
+</dd>
+<dt id="dnsSignatureExpiration-CERT-PEN-6871-IE-237-4-octets-unsigned"><b>dnsSignatureExpiration</b> CERT (PEN 6871) IE 237, 4 octets, unsigned</dt>
+<dd>
+
+<p>The Signature Expiration field in a RRSIG RR. The Expiration and Inception fields specify a validity period for the signature.</p>
+
+</dd>
+<dt id="dnsTTL-CERT-PEN-6871-IE-199-4-octets-unsigned1"><b>dnsTTL</b> CERT (PEN 6871) IE 199, 4 octets, unsigned</dt>
+<dd>
+
+<p>The Original TTL Field in the RRSIG RR.</p>
+
+</dd>
+<dt id="dnsKeyTag-CERT-PEN-6871-IE-228-2-octets-unsigned1"><b>dnsKeyTag</b> CERT (PEN 6871) IE 228, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Key Tag field in a RRSIG RR.</p>
+
+</dd>
+<dt id="dnsTypeCovered-CERT-PEN-6871-IE-240-2-octets-unsigned"><b>dnsTypeCovered</b> CERT (PEN 6871) IE 240, 2 octets, unsigned</dt>
+<dd>
+
+<p>The Type Covered field in a RRSIG RR.</p>
+
+</dd>
+<dt id="dnsAlgorithm-CERT-PEN-6871-IE-227-1-octet-unsigned1"><b>dnsAlgorithm</b> CERT (PEN 6871) IE 227, 1 octet, unsigned</dt>
+<dd>
+
+<p>The Algorithm Number field in a RRSIG RR. Identifies the algorithm used to create the signature.</p>
+
+</dd>
+<dt id="dnsLabels-CERT-PEN-6871-IE-239-1-octet-unsigned"><b>dnsLabels</b> CERT (PEN 6871) IE 239, 1 octet, unsigned</dt>
+<dd>
+
+<p>The Labels field in a RRSIG RR. Specifies the number of labels in the original RRSIG resource record owner name.</p>
+
+</dd>
+</dl>
+
+</li>
+</ul>
+
+<h2 id="SSL-TLS">SSL/TLS</h2>
+
+<p>Secure Socket Layer (SSL)/Transport Layer Security (TLS) Deep Packet Inspection can identify and export handshake and certificate information if it is contained in the payload of the flow. Each certificate identified by <b>yaf</b> is exported as an entry in the subTemplateList field below. Each entry in the subTemplateList has three nested subTemplateLists, one for issuer fields, one for subject fields, and one for extension fields, along with other basic handshake elements such as serial numbers and validity timestamps. Each of the nested subTemplateLists contain an ID and a value. The IDs correspond to the attributes associated with X.509 Certificates, object identifiers id-ce and id-at.</p>
+
+<dl>
+
+<dt id="sslCipher-CERT-PEN-6871-IE-185-4-octets-unsigned-DPI-basicList"><b>sslCipher</b> CERT (PEN 6871) IE 185, 4 octets, unsigned, DPI basicList</dt>
+<dd>
+
+<p>sslCipher is exported by <b>yaf</b> as a basicList that contains the list of CipherSuites suggested by the client in the ClientHello Message.</p>
+
+</dd>
+<dt id="sslServerCipher-CERT-PEN-6871-IE-187-4-octets-unsigned"><b>sslServerCipher</b> CERT (PEN 6871) IE 187, 4 octets, unsigned</dt>
+<dd>
+
+<p>sslServerCipher is the CipherSuite chosen by the server in the ServerHello message.</p>
+
+</dd>
+<dt id="sslClientVersion-CERT-PEN-6871-IE-186-1-octet-unsigned"><b>sslClientVersion</b> CERT (PEN 6871) IE 186, 1 octet, unsigned</dt>
+<dd>
+
+<p>sslClientVersion is the version it supports contained in the initial ClientHello message.</p>
+
+</dd>
+<dt id="sslCompressionMethod-CERT-PEN-6871-IE-188-1-octet-unsigned"><b>sslCompressionMethod</b> CERT (PEN 6871) IE 188, 1 octet, unsigned</dt>
+<dd>
+
+<p>sslCompressionMethod is the compression method chosen by the server in the ServerHello message.</p>
+
+</dd>
+<dt id="sslRecordVersion-CERT-PEN-6871-IE-288-2-octets-unsigned"><b>sslRecordVersion</b> CERT (PEN 6871) IE 288, 2 octets, unsigned</dt>
+<dd>
+
+<p>sslRecordVersion is the version of ssl or tls that was used in the flow.</p>
+
+</dd>
+<dt id="subTemplateList-IE-292-variable-length1"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>This contains 0 or more X.509 Certificates as available to <b>yaf</b> in the captured payload. Note that most certificate chains are about 3000 bytes. In order to capture the entire certificate chain, <b>--max-payload</b> should be set appropriately.</p>
+
+<dl>
+
+<dt id="subTemplateList-IE-292-variable-length2"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>The Issuer field identifies the entity that has signed and issued the certificate. It is encoded as a sequence of Relative Distinguished Names, which are basically type, value pairs. This list will contains zero or more occurences of the RelativeDistinguishedName id, value pairs pulled from the X.509 Certificate Issuer RDNSequence. There will be one entry in the list for each pair. See below for a common list of attributes.</p>
+
+</dd>
+<dt id="subTemplateList-IE-292-variable-length3"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>The Subject field identifies the entity associated with the public key stored in the subject public key field. It is encoded as a sequence of Relative Distinguished Names, which are basically type, value pairs. This list will contains zero or more occurences of the RelativeDistinguishedName id, value pairs pulled from the X.509 Certificate Subject RDNSequence. There will be one entry in the list for each pair. See below for a common list of attributes.</p>
+
+</dd>
+<dt id="subTemplateList-IE-292-variable-length4"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>Extensions are only defined for X.509 v3 certificates and provide methods for associating additional attributes with the Issuer and Subject information. Each extension includes an object identifier and an ASN.1 structure. This list will contain zero or more occurences of the object ids and ASN.1 values. <b>yaf</b> will not parse the ASN.1 values for the string objects, it includes the entire ASN.1 structure in the value field. However, it does not contain the entire Extension ID. <b>yaf</b> only parses extensions that are members of the id-ce arc and only exports information about the following objects:</p>
+
+<dl>
+
+<dt id="id-ce-subjectKeyIdentifier-id-ce-14"><b>id-ce-subjectKeyIdentifier</b> {id-ce 14}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-keyUsage-id-ce-15"><b>id-ce-keyUsage</b> {id-ce 15}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-privateKeyUsagePeriod-id-ce-16"><b>id-ce-privateKeyUsagePeriod</b> {id-ce 16}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-subjectAltName-id-ce-17"><b>id-ce-subjectAltName</b> {id-ce 17}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-issuerAltName-id-ce-18"><b>id-ce-issuerAltName</b> {id-ce 18}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-certificateIssuer-id-ce-29"><b>id-ce-certificateIssuer</b> {id-ce 29}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-cRLDistributionPoints-id-ce-31"><b>id-ce-cRLDistributionPoints</b> {id-ce 31}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-certificatePolicies-id-ce-32"><b>id-ce-certificatePolicies</b> {id-ce 32}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-authorityKeyIdentifier-id-ce-35"><b>id-ce-authorityKeyIdentifier</b> {id-ce 35}</dt>
+<dd>
+
+</dd>
+<dt id="id-ce-extKeyUsage-id-ce-37"><b>id-ce-extKeyUsage</b> {id-ce 37}</dt>
+<dd>
+
+</dd>
+</dl>
+
+</dd>
+<dt id="sslCertSignature-CERT-PEN-6871-IE-190-variable-length"><b>sslCertSignature</b> CERT (PEN 6871) IE 190, variable length</dt>
+<dd>
+
+<p>The signature contained in a SSL certificate. This is typically the hashing algorithm identifier.</p>
+
+</dd>
+<dt id="sslCertSerialNumber-CERT-PEN-6871-IE-244-variable-length"><b>sslCertSerialNumber</b> CERT (PEN 6871) IE 244, variable length</dt>
+<dd>
+
+<p>The Serial Number from the X.509 certificate.</p>
+
+</dd>
+<dt id="sslCertValidityNotBefore-CERT-PEN-6871-IE-247-variable-length"><b>sslCertValidityNotBefore</b> CERT (PEN 6871) IE 247, variable length</dt>
+<dd>
+
+<p>The notBefore field in the Validity Sequence of the X.509 Certificate.</p>
+
+</dd>
+<dt id="sslCertValidityNotAfter-CERT-PEN-6871-IE-248-variable-length"><b>sslCertValidityNotAfter</b> CERT (PEN 6871) IE 248, variable length</dt>
+<dd>
+
+<p>The notAfter field in the Validity Sequence of the X.509 Certificate.</p>
+
+</dd>
+<dt id="sslPublicKeyAlgorithm-CERT-PEN-6871-IE-249-variable-length"><b>sslPublicKeyAlgorithm</b> CERT (PEN 6871) IE 249, variable length</dt>
+<dd>
+
+<p>The algorithm, encoded in ASN.1, in the SubjectPublicKeyInfo Sequence of the X.509 Certificate.</p>
+
+</dd>
+<dt id="sslPublicKeyLength-CERT-PEN-6871-IE-250-2-octets-unsigned"><b>sslPublicKeyLength</b> CERT (PEN 6871) IE 250, 2 octets, unsigned</dt>
+<dd>
+
+<p>The length of the public key in the X.509 Certificate.</p>
+
+</dd>
+<dt id="sslCertVersion-CERT-PEN-6871-IE-189-1-octet-unsigned"><b>sslCertVersion</b> CERT (PEN 6871) IE 189, 1 octet, unsigned</dt>
+<dd>
+
+<p>The Certificate Version. This is the value contained in the certificate v1(0), v2(1), v3(2).</p>
+
+</dd>
+<dt id="sslCertificateHash-CERT-PEN-6871-IE-295-variable-length-optional"><b>sslCertificateHash</b> CERT (PEN 6871) IE 295, variable length, optional</dt>
+<dd>
+
+<p>The hash of the X.509 certificate. This field is only populated if the <i>cert_hash_enabled</i> is present and set to 1.</p>
+
+</dd>
+</dl>
+
+</dd>
+<dt id="sslServerName-CERT-PEN-6871-IE-294-variable-length"><b>sslServerName</b>, CERT (PEN 6871), IE 294, variable length</dt>
+<dd>
+
+<p>The server name from the SSL/TLS Client Hello. This is typically the name of the server that the client is connecting to.</p>
+
+</dd>
+</dl>
+
+<h3 id="Issuer-Subject-and-Extension-Templates">Issuer, Subject, and Extension Templates</h3>
+
+<p>Each subtemplateList for the above issuer, subject, and extension sequences will contain zero or more entries of the below elements.</p>
+
+<ul>
+
+<li><p><b>sslObjectValue</b> CERT (PEN 6871) IE 246, variable length</p>
+
+<p>The bit strings associated with the below attribute types.</p>
+
+</li>
+<li><p><b>sslObjectType</b> CERT (PEN 6871) IE 245, 1 octet, unsigned</p>
+
+<p>Above lists the extension types that <b>yaf</b> will export. For the Issuer and Subject subTemplateLists, <b>yaf</b> only parses objects that are members of the id-at arc {joint-iso-ccitt(2) ds(5) 4}, pkcs-9 {iso(1) member-body (2) us(840) rsadsi(113459) pkcs(1) 9}, and LDAP dc 0.9.2342.19200300.100.1.25. This field will not contain the full object identfier, it will just contain the member id. For example, for an issuer common name, <b>sslObjectType</b> will contain 3. Below is a list of common objects in an X.509 RelativeDistinguishedName Sequence for X.509 Certificates:</p>
+
+<dl>
+
+<dt id="pkcs-9-emailAddress-pkcs-9-1"><b>pkcs-9-emailAddress</b> {pkcs-9 1}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-commonName-id-at-3"><b>id-at-commonName</b> {id-at 3}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-countryName-id-at-6"><b>id-at-countryName</b> {id-at 6}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-localityName-id-at-7"><b>id-at-localityName</b> {id-at 7}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-stateOrProvinceName-id-at-8"><b>id-at-stateOrProvinceName</b> {id-at 8}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-streetAddress-id-at-9"><b>id-at-streetAddress</b> {id-at 9}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-organizationName-id-at-10"><b>id-at-organizationName</b> {id-at 10}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-organizationalUnitName-id-at-11"><b>id-at-organizationalUnitName</b> {id-at 11}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-title-id-at-12"><b>id-at-title</b> {id-at 12}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-postalCode-id-at-17"><b>id-at-postalCode</b> {id-at 17}</dt>
+<dd>
+
+</dd>
+<dt id="dc-25"><b>0.9.2342.19200300.100.1.25</b> {dc 25}</dt>
+<dd>
+
+</dd>
+<dt id="id-at-name-id-at-41"><b>id-at-name</b> {id-at 41}</dt>
+<dd>
+
+</dd>
+</dl>
+
+</li>
+</ul>
+
+<h3 id="Full-Certificate-Template">Full Certificate Template</h3>
+
+<p><b>yaf</b> will export the full X.509 certificate if the <i>cert_export_enabled</i> variable is present and set to 1 in the configuration file. The following information is exported as an extra entry in the subTemplateMultiList as a basicList:</p>
+
+<dl>
+
+<dt id="sslCertificate-CERT-PEN-6871-IE-296-variable-length-DPI-basicList"><b>sslCertificate</b>, CERT (PEN 6871) IE 296, variable length, DPI basicList</dt>
+<dd>
+
+</dd>
+</dl>
+
+<h2 id="IRC">IRC</h2>
+
+<p>Internet Relay Chat (IRC) Deep Packet Inspection is based on RFC 2812. The following information element is exported as a template in the subTemplateMultiList as a basicList of variable length elements in the following order:</p>
+
+<dl>
+
+<dt id="ircTextMessage-CERT-PEN-6871-IE-125-variable-length-DPI-basicList"><b>ircTextMessage</b> CERT (PEN 6871) IE 125, variable length, DPI basicList</dt>
+<dd>
+
+<p>IRC Chat or Join Message. This field contains any IRC Command and the following arguments.</p>
+
+</dd>
+</dl>
+
+<h2 id="NNTP">NNTP</h2>
+
+<p>Network News Transfer Protocol (NNTP) Deep Packet Inspection is based on RFC 977. The following information elements are exported as a template in the subTemplateMultiList in the following order:</p>
+
+<dl>
+
+<dt id="nntpResponse-CERT-PEN-6871-IE-172-variable-length"><b>nntpResponse</b> CERT (PEN 6871) IE 172, variable length</dt>
+<dd>
+
+<p>NNTP Reply. This consists of a three digit status code and text message.</p>
+
+</dd>
+<dt id="nntpCommand-CERT-PEN-6871-IE-173-variable-length"><b>nntpCommand</b> CERT (PEN 6871) IE 173, variable length</dt>
+<dd>
+
+<p>NNTP Command. Contains an NNTP Command and following argument(s).</p>
+
+</dd>
+</dl>
+
+<h2 id="POP3">POP3</h2>
+
+<p>Post Office Protocol 3 (POP3) Deep Packet Inspection is based on RFC 1939. The following information element is exported as a template in the subTemplateMultiList as a basicList of variable length elements:</p>
+
+<dl>
+
+<dt id="pop3TextMessage-CERT-PEN-6871-IE-124-variable-length-DPI-basicList"><b>pop3TextMessage</b> CERT (PEN 6871) IE 124, variable length, DPI basicList</dt>
+<dd>
+
+<p>POP3 Command and Replies. Contains any command or reply message found in POP3 payload data.</p>
+
+</dd>
+</dl>
+
+<h2 id="SLP">SLP</h2>
+
+<p>Service Location Protocol (SLP) Deep Packet Inspection is based on RFC 2608. The following information elements are exported as a template in the subTemplateMultiList in the following order:</p>
+
+<dl>
+
+<dt id="slpString-CERT-PEN-6871-IE-130-variable-length-DPI-basicList"><b>slpString</b> CERT (PEN 6871) IE 130, variable length, DPI basicList</dt>
+<dd>
+
+<p>Contains the text elements found in an SLP Service Request.</p>
+
+</dd>
+<dt id="slpVersion-CERT-PEN-6871-IE-128-1-octet-unsigned"><b>slpVersion</b> CERT (PEN 6871) IE 128, 1 octet, unsigned</dt>
+<dd>
+
+<p>SLP Version Number.</p>
+
+</dd>
+<dt id="slpMessageType-CERT-PEN-6871-IE-129-1-octet-unsigned"><b>slpMessageType</b> CERT (PEN 6871) IE 129, 1 octet, unsigned</dt>
+<dd>
+
+<p>SLP Message Type. This value should be between 1 and 11 and describes the type of SLP message.</p>
+
+</dd>
+</dl>
+
+<h2 id="TFTP">TFTP</h2>
+
+<p>Trivial File Transfer Protocol (TFTP) Deep Packet Inspection is based on RFC 1350. The following information elements are exported as a template in the subTemplateMultiList in the following order:</p>
+
+<dl>
+
+<dt id="tftpFilename-CERT-PEN-6871-IE-126-variable-length"><b>tftpFilename</b> CERT (PEN 6871) IE 126, variable length</dt>
+<dd>
+
+<p>TFTP Name of File being transferred.</p>
+
+</dd>
+<dt id="tftpMode-CERT-PEN-6871-IE-127-variable-length"><b>tftpMode</b> CERT (PEN 6871) IE 127, variable length</dt>
+<dd>
+
+<p>Contains the mode of transfer. (Currently supported: netascii, octet, mail).</p>
+
+</dd>
+</dl>
+
+<h2 id="MySQL">MySQL</h2>
+
+<p>MySQL Deep Packet Inspection is based on information found at http://forge.mysql.com/wiki/MySQL_Internals_ClientServer_Protocol. MySQL packet capture information is exported in the <b>yaf</b> subTemplateMultiList as a subTemplateList of Command Code, Command Text pairs.</p>
+
+<dl>
+
+<dt id="subTemplateList-IE-292-variable-length5"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>An IPFIX SubTemplateList. This type represents a list of zero or more instances of a structured data type, where the data type of each list element is the same and corresponds with a single Template Record. In this case, a list of MySQL Command Code, Command Text Pairs. There will be one element in the list for each MySQL Command found.</p>
+
+<dl>
+
+<dt id="mysqlCommandText-CERT-PEN-6871-IE-225-variable-length"><b>mysqlCommandText</b> CERT (PEN 6871) IE 225, variable length</dt>
+<dd>
+
+<p>MySQL Command Text. For example, this can be a SELECT, INSERT, DELETE statement. This is the first element in the MySQL subTemplateList.</p>
+
+</dd>
+<dt id="mysqlCommandCode-CERT-PEN-6871-IE-224-1-octet-unsigned"><b>mysqlCommandCode</b> CERT (PEN 6871) IE 224, 1 octet, unsigned</dt>
+<dd>
+
+<p>MySQL Command Code. This number should be between 0 and 28. This is the second element in the above MySQL subTemplateList.</p>
+
+</dd>
+</dl>
+
+</dd>
+<dt id="mysqlUsername-CERT-PEN-6871-IE-223-variable-length"><b>mysqlUsername</b> CERT (PEN 6871) IE 223, variable length</dt>
+<dd>
+
+<p>MySQL Login User Name.</p>
+
+</dd>
+</dl>
+
+<h2 id="DNP3">DNP3</h2>
+
+<p>Distributed Network Protocol (DNP3) Deep Packet Inspection is slightly different than other plugin-based protocols. YAF will export the following information if the yafDPIRules.conf contain regular expressions with the label ID 20000. The regular expressions are compared against the payload of DNP3 packets starting with the function code in the DNP Application Layer header. YAF will loop through all the the available DNP3 packets contained in the captured payload. For each packet that matches one of the regular expressions listed in yafDPIRules.conf, YAF will include an entry in the exported subTemplateList. The subTemplateMultiList contains the following information elements in the following order:</p>
+
+<dl>
+
+<dt id="subTemplateList-IE-292-variable-length6"><b>subTemplateList</b> IE 292, variable length</dt>
+<dd>
+
+<p>An IPFIX SubTemplateList. This type represents a list of zero or more instances of a structured data type, where the data type of each list element is the same and corresponds with a single Template Record. There will be one element in the list for each DNP3 packet that matches one of the DNP3 regular expressions found in the yafDPIRules.conf file.</p>
+
+<dl>
+
+<dt id="dnp3SourceAddress-CERT-PEN-6871-IE-281-2-octets-unsigned"><b>dnp3SourceAddress</b> CERT (PEN 6871) IE 281, 2 octets, unsigned</dt>
+<dd>
+
+<p>The DNP3 Source Address found in the Data Link Layer of the DNP Header.</p>
+
+</dd>
+<dt id="dnp3DestinationAddress-CERT-PEN-6871-IE-282-2-octets-unsigned"><b>dnp3DestinationAddress</b> CERT (PEN 6871) IE 282, 2 octets, unsigned</dt>
+<dd>
+
+<p>The DNP3 Destination Address found in the Data Link Layer of the DNP Header.</p>
+
+</dd>
+<dt id="dnp3Function-CERT-PEN-6871-IE-283-1-octet-unsigned"><b>dnp3Function</b> CERT (PEN 6871) IE 283, 1 octet, unsigned</dt>
+<dd>
+
+<p>The DNP3 Function Code found in the first byte of the Application Layer.</p>
+
+</dd>
+<dt id="dnp3ObjectData-CERT-PEN-6871-IE-284-variable-length"><b>dnp3ObjectData</b> CERT (PEN 6871) IE 284, variable length</dt>
+<dd>
+
+<p>The pattern captured from the DNP3 regular expression in yafDPIRules.conf</p>
+
+</dd>
+</dl>
+
+</dd>
+</dl>
+
+<h2 id="Modbus">Modbus</h2>
+
+<p>Modbus DPI is similar to DNP3 DPI. YAF will export any patterns matched by the regular expressions labeled with the ID 502 found in the yafDPIRules.conf file. The regular expressions are compared against the payload of all valid Modbus packets starting right after the MBAP header (offset 7), beginning with the Modbus function code. The information is exported as variable length fields in a single BasicList. All regular expressions for Modbus should use the label 502. No user-defined information elements will be accepted for Modbus.</p>
+
+<dl>
+
+<dt id="modbusData-CERT-PEN-6871-IE-285-variable-length-DPI-basicList"><b>modbusData</b> CERT (PEN 6871) IE 285, variable length, DPI basicList</dt>
+<dd>
+
+<p>Any patterns captured from the Modbus regular expressions in yafDPIRules.conf</p>
+
+</dd>
+</dl>
+
+<h2 id="Ethernet-IP">Ethernet/IP</h2>
+
+<p>Ethernet/IP DPI is similar to Modbus DPI. YAF will export any patterns matched by the regular expressions labeled with the ID 44818 in the yafDPIRules.conf file. The regular expressions are compared against the start of the payload of all valid Ethernet/IP packets (Command in the Encapsulation Header is the first byte). The matched patterns are exported as variable length fields in a single BasicList. All regular expressions for Ethernet/IP should use the label 44818. No user-defined information elements will be accepted for Ethernet/IP.</p>
+
+<dl>
+
+<dt id="ethernetIPData-CERT-PEN-6871-IE-286-variable-length-DPI-basicList"><b>ethernetIPData</b> CERT (PEN 6871), IE 286, variable length, DPI basicList</dt>
+<dd>
+
+<p>The pattern captured from the Ethernet/IP regular expressions in yafDPIRules.conf</p>
+
+</dd>
+</dl>
+
+<h2 id="RTP">RTP</h2>
+
+<p>YAF will export the Payload Type in the Real-time Transport Protocol (RTP) header if RTP DPI is enabled (yes by default). The Payload Type indicates the format of the payload and how it should be interpreted by the receiving application. The following two elements will be exported for each flow labeled as RTP. If the flow is a uniflow, the reverse element will be exported but will contain the value of 0.</p>
+
+<dl>
+
+<dt id="rtpPayloadType-CERT-PEN-6871-IE-287-1-octet-unsigned"><b>rtpPayloadType</b> CERT (PEN 6871), IE 287, 1 octet, unsigned</dt>
+<dd>
+
+<p>The payload type in the RTP header of the first payload in the forward direction.</p>
+
+</dd>
+<dt id="reverseRtpPayloadType-CERT-PEN-6871-IE-288-1-octet-unsigned"><b>reverseRtpPayloadType</b> CERT (PEN 6871), IE 288, 1 octet, unsigned</dt>
+<dd>
+
+<p>The payload type in the RTP header of the first payload in the reverse direction.</p>
+
+</dd>
+</dl>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Emily Sarneso &lt;ecoff@cert.org&gt; and the CERT Network Situational Awareness Group Engineering Team, http://www.cert.org/netsa</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p><b>yaf(1)</b>, <b>yafscii(1)</b>, PCRE Documentation</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2018 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

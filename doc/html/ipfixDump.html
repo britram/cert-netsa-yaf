@@ -1,0 +1,130 @@
+<head>
+<title>YAF - Documentation</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+        <link rel="stylesheet" type="text/css" href="../site/style.css" />
+
+</head>
+<body>
+    <div id="p-body">
+      <div id="l-header">
+        <img src="../site/sei-logo.png" id="l-sei-logo"
+            alt="Software Engineering Institute | Carnegie Mellon&copy;" />
+        <div id="l-netsa-logo"><a id="l-netsa-name" href="../index.html"><b>CERT NetSA Security Suite</b></a></div>
+        <div id="l-netsa-motto">Monitoring for Large-Scale Networks</div>
+        <h1 class="l-page-title">YAF</h1>
+        <span id="l-subtitle">Documentation</span>
+      </div><!-- l-header -->
+      <div id="l-content">
+        <div id="l-sidebar">
+          <div class="p-sidebar-section">
+            <h1><a href="index.html">YAF</a></h1>
+            <ul>
+              <li><a href="docs.html">Documentation</a></li>
+              <li><a href="download.html">Downloads</a></li>
+            </ul>
+          </div><!-- p-sidebar-section -->
+        </div><!-- l-sidebar -->
+<h1><a name="name">NAME</a></h1><p><b>ipfixDump</b> - IPFIX file dumper</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<pre><code>    ipfixDump    [--in FILE_NAME][--out FILE_NAME]
+                 [--yaf]
+                 [--templates][--data][--stats]
+                 [--version]</code></pre>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p><b>ipfixDump</b> is a tool to read IPFIX files and dump the contents in ASCII to perform low level analysis of the files. <b>ipfixDump</b> uses libfixbuf to decode the files and it does not need any user input as to what the file contains as long as the IPFIX templates are at the beginning of the file. Any records that do not have a corresponding template will be ignored.</p>
+
+<p>By default, <b>ipfixDump</b> uses the standard information model provided by libfixbuf. If <b>ipfixDump</b> is given the <b>--yaf</b> switch, it will include the <b>yaf</b> CERT private enterprise information elements. If <b>yaf</b> was configured to enable DPI (plugins) <b>ipfixDump</b> will also add the DPI elements that <b>yaf</b> can export.</p>
+
+<p><b>ipfixDump</b> supports Options templates and records. <b>ipfixDump</b> will write all IPFIX templates and data records to the output file. It will also write message and set headers when present.</p>
+
+<p><b>ipfixDump</b> supports IPFIX structured data in the form of basicLists, subTemplateLists, and subTemplateMultiLists.</p>
+
+<p><b>ipfixDump</b> currently does not support displaying sequence numbers.</p>
+
+<h1 id="OPTIONS">OPTIONS</h1>
+
+<p>The following options are available for <b>ipfixDump</b>.</p>
+
+<dl>
+
+<dt id="in-FILE_NAME"><b>--in</b> <i>FILE_NAME</i></dt>
+<dd>
+
+<p>The <i>FILE_NAME</i> is the filename to read. The string &#39;-&#39; may be used to read from standard input (the default).</p>
+
+</dd>
+<dt id="out-FILE_NAME"><b>--out</b> <i>FILE_NAME</i></dt>
+<dd>
+
+<p><i>FILE_NAME</i> should be the filename to write to or the string &#39;-&#39; may be used to write to standard output (the default).</p>
+
+</dd>
+<dt id="yaf"><b>--yaf</b></dt>
+<dd>
+
+<p>If present, <b>ipfixDump</b> will include the available <b>yaf(1)</b> CERT private enterprise information elements. If <b>yaf(1)</b> was configured with plugins enabled, <b>ipfixDump</b> will add all of the deep packet inspection elements to the information model. By default, the standard IPFIX information model is used (standard elements defined by IANA).</p>
+
+</dd>
+<dt id="template"><b>--template</b></dt>
+<dd>
+
+<p>If present, <b>ipfixDump</b> will only write the templates present in the input file.</p>
+
+</dd>
+<dt id="data"><b>--data</b></dt>
+<dd>
+
+<p>If present, <b>ipfixDump</b> will only write the data records present in the input file.</p>
+
+</dd>
+<dt id="stats"><b>--stats</b></dt>
+<dd>
+
+<p>If present, <b>ipfixDump</b> will only write overall file statistics - which include the number of templates present, the number of data records present, and the number of IPFIX messages present.</p>
+
+</dd>
+<dt id="version"><b>--version</b></dt>
+<dd>
+
+<p>If present, print version and copyright information to standard error and exit.</p>
+
+</dd>
+</dl>
+
+<h1 id="Examples">Examples</h1>
+
+<p>In the following examples, the dollar sign (&quot;$&quot;) represents the shell prompt. The text after the dollar sign represents the command line.</p>
+
+<ul>
+
+<pre><code> $ ipfixDump --in - --out -
+
+ $ ipfixDump --in /data/ipfix.ipfix --out /data/text.txt --yaf</code></pre>
+
+</ul>
+
+<h1 id="Known-Issues">Known Issues</h1>
+
+<p>Bug reports may be sent directly to the Network Situational Awareness team at &lt;netsa-help@cert.org&gt;.</p>
+
+<h1 id="AUTHORS">AUTHORS</h1>
+
+<p>Emily Sarneso and the CERT Network Situational Awareness Group Engineering Team, &lt;http://www.cert.org/netsa&gt;.</p>
+
+<h1 id="SEE-ALSO">SEE ALSO</h1>
+
+<p>yaf(1), yafscii(1)</p>
+
+      </div><!-- l-content -->
+      <div id="l-footer">&copy; 2006-2016 Carnegie Mellon University</div>
+    </div><!-- p-body -->
+</body>
+
+
+</html>
+

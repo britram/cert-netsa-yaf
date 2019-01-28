@@ -1,0 +1,111 @@
+=pod
+
+=head1 NAME
+
+B<ipfixDump> - IPFIX file dumper
+
+=head1 SYNOPSIS
+
+    ipfixDump    [--in FILE_NAME][--out FILE_NAME]
+                 [--yaf]
+                 [--templates][--data][--stats]
+                 [--version]
+
+=head1 DESCRIPTION
+
+B<ipfixDump> is a tool to read IPFIX files and dump the contents in ASCII to
+perform low level analysis of the files.  B<ipfixDump> uses libfixbuf to decode
+the files and it does not need any user input as to what the file contains
+as long as the IPFIX templates are at the beginning of the file.  Any records
+that do not have a corresponding template will be ignored.
+
+By default,
+B<ipfixDump> uses the standard information model provided by libfixbuf.  If
+B<ipfixDump> is given the B<--yaf> switch, it will include the B<yaf> CERT
+private enterprise information elements.  If B<yaf> was configured to
+enable DPI (plugins) B<ipfixDump> will also add the DPI elements that
+B<yaf> can export.
+
+B<ipfixDump> supports Options templates and records.  B<ipfixDump> will
+write all IPFIX templates and data records to the output file.  It will also
+write message and set headers when present.
+
+B<ipfixDump> supports IPFIX structured data in the form of basicLists,
+subTemplateLists, and subTemplateMultiLists.
+
+B<ipfixDump> currently does not support displaying sequence numbers.
+
+=head1 OPTIONS
+
+The following options are available for B<ipfixDump>.
+
+=over 4
+
+=item B<--in> I<FILE_NAME>
+
+The I<FILE_NAME> is the filename to read.  The string '-' may be used to
+read from standard input (the default).
+
+=item B<--out> I<FILE_NAME>
+
+I<FILE_NAME> should be the filename to write to or the string '-' may be used
+to write to standard output (the default).
+
+=item B<--yaf>
+
+If present, B<ipfixDump> will include the available B<yaf(1)> CERT private
+enterprise information elements.  If B<yaf(1)> was configured with plugins
+enabled, B<ipfixDump> will add all of the deep packet inspection elements
+to the information model.  By default, the standard IPFIX information model
+is used (standard elements defined by IANA).
+
+=item B<--template>
+
+If present, B<ipfixDump> will only write the templates present in the
+input file.
+
+=item B<--data>
+
+If present, B<ipfixDump> will only write the data records present in the
+input file.
+
+=item B<--stats>
+
+If present, B<ipfixDump> will only write overall file statistics - which
+include the number of templates present, the number of data records present,
+and the number of IPFIX messages present.
+
+=item B<--version>
+
+If present, print version and copyright information to standard error and exit.
+
+=back
+
+=head1 Examples
+
+In the following examples, the dollar sign ("$") represents the shell
+prompt.  The text after the dollar sign represents the command line.
+
+=over 1
+
+ $ ipfixDump --in - --out -
+
+ $ ipfixDump --in /data/ipfix.ipfix --out /data/text.txt --yaf
+
+=back
+
+=head1 Known Issues
+
+Bug reports may be sent directly to the Network Situational Awareness team at
+E<lt>netsa-help@cert.orgE<gt>.
+
+=head1 AUTHORS
+
+Emily Sarneso and the CERT Network Situational Awareness Group Engineering Team,
+E<lt>http://www.cert.org/netsaE<gt>.
+
+=head1 SEE ALSO
+
+yaf(1), yafscii(1)
+
+=cut
